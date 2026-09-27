@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
+  <rect width="800" height="450" fill="#fff"/>
+  <line x1="10.00" y1="0" x2="10.00" y2="450" stroke="#eeeeee"/>
+  <line x1="29.50" y1="0" x2="29.50" y2="450" stroke="#eeeeee"/>
+  <line x1="49.00" y1="0" x2="49.00" y2="450" stroke="#eeeeee"/>
+  <line x1="68.50" y1="0" x2="68.50" y2="450" stroke="#eeeeee"/>
+  <line x1="88.00" y1="0" x2="88.00" y2="450" stroke="#eeeeee"/>
+  <line x1="107.50" y1="0" x2="107.50" y2="450" stroke="#eeeeee"/>
+  <line x1="127.00" y1="0" x2="127.00" y2="450" stroke="#eeeeee"/>
+  <line x1="146.50" y1="0" x2="146.50" y2="450" stroke="#eeeeee"/>
+  <line x1="166.00" y1="0" x2="166.00" y2="450" stroke="#eeeeee"/>
+  <line x1="185.50" y1="0" x2="185.50" y2="450" stroke="#eeeeee"/>
+  <line x1="205.00" y1="0" x2="205.00" y2="450" stroke="#eeeeee"/>
+  <line x1="224.50" y1="0" x2="224.50" y2="450" stroke="#eeeeee"/>
+  <line x1="244.00" y1="0" x2="244.00" y2="450" stroke="#eeeeee"/>
+  <line x1="263.50" y1="0" x2="263.50" y2="450" stroke="#eeeeee"/>
+  <line x1="283.00" y1="0" x2="283.00" y2="450" stroke="#eeeeee"/>
+  <line x1="302.50" y1="0" x2="302.50" y2="450" stroke="#eeeeee"/>
+  <line x1="322.00" y1="0" x2="322.00" y2="450" stroke="#eeeeee"/>
+  <line x1="341.50" y1="0" x2="341.50" y2="450" stroke="#eeeeee"/>
+  <line x1="361.00" y1="0" x2="361.00" y2="450" stroke="#eeeeee"/>
+  <line x1="380.50" y1="0" x2="380.50" y2="450" stroke="#eeeeee"/>
+  <line x1="400.00" y1="0" x2="400.00" y2="450" stroke="#eeeeee"/>
+  <line x1="419.50" y1="0" x2="419.50" y2="450" stroke="#eeeeee"/>
+  <line x1="439.00" y1="0" x2="439.00" y2="450" stroke="#eeeeee"/>
+  <line x1="458.50" y1="0" x2="458.50" y2="450" stroke="#eeeeee"/>
+  <line x1="478.00" y1="0" x2="478.00" y2="450" stroke="#eeeeee"/>
+  <line x1="497.50" y1="0" x2="497.50" y2="450" stroke="#eeeeee"/>
+  <line x1="517.00" y1="0" x2="517.00" y2="450" stroke="#eeeeee"/>
+  <line x1="536.50" y1="0" x2="536.50" y2="450" stroke="#eeeeee"/>
+  <line x1="556.00" y1="0" x2="556.00" y2="450" stroke="#eeeeee"/>
+  <line x1="575.50" y1="0" x2="575.50" y2="450" stroke="#eeeeee"/>
+  <line x1="595.00" y1="0" x2="595.00" y2="450" stroke="#eeeeee"/>
+  <line x1="614.50" y1="0" x2="614.50" y2="450" stroke="#eeeeee"/>
+  <line x1="634.00" y1="0" x2="634.00" y2="450" stroke="#eeeeee"/>
+  <line x1="653.50" y1="0" x2="653.50" y2="450" stroke="#eeeeee"/>
+  <line x1="673.00" y1="0" x2="673.00" y2="450" stroke="#eeeeee"/>
+  <line x1="692.50" y1="0" x2="692.50" y2="450" stroke="#eeeeee"/>
+  <line x1="712.00" y1="0" x2="712.00" y2="450" stroke="#eeeeee"/>
+  <line x1="731.50" y1="0" x2="731.50" y2="450" stroke="#eeeeee"/>
+  <line x1="751.00" y1="0" x2="751.00" y2="450" stroke="#eeeeee"/>
+  <line x1="770.50" y1="0" x2="770.50" y2="450" stroke="#eeeeee"/>
+  <line x1="790.00" y1="0" x2="790.00" y2="450" stroke="#eeeeee"/>
+  <line x1="10.00" y1="0" x2="10.00" y2="450" stroke="#cccccc"/>
+  <line x1="107.50" y1="0" x2="107.50" y2="450" stroke="#cccccc"/>
+  <line x1="205.00" y1="0" x2="205.00" y2="450" stroke="#cccccc"/>
+  <line x1="302.50" y1="0" x2="302.50" y2="450" stroke="#cccccc"/>
+  <line x1="400.00" y1="0" x2="400.00" y2="450" stroke="#cccccc"/>
+  <line x1="497.50" y1="0" x2="497.50" y2="450" stroke="#cccccc"/>
+  <line x1="595.00" y1="0" x2="595.00" y2="450" stroke="#cccccc"/>
+  <line x1="692.50" y1="0" x2="692.50" y2="450" stroke="#cccccc"/>
+  <line x1="790.00" y1="0" x2="790.00" y2="450" stroke="#cccccc"/>
+  <line x1="0" y1="440.00" x2="800" y2="440.00" stroke="#eeeeee"/>
+  <line x1="0" y1="418.50" x2="800" y2="418.50" stroke="#eeeeee"/>
+  <line x1="0" y1="397.00" x2="800" y2="397.00" stroke="#eeeeee"/>
+  <line x1="0" y1="375.50" x2="800" y2="375.50" stroke="#eeeeee"/>
+  <line x1="0" y1="354.00" x2="800" y2="354.00" stroke="#eeeeee"/>
+  <line x1="0" y1="332.50" x2="800" y2="332.50" stroke="#eeeeee"/>
+  <line x1="0" y1="311.00" x2="800" y2="311.00" stroke="#eeeeee"/>
+  <line x1="0" y1="289.50" x2="800" y2="289.50" stroke="#eeeeee"/>
+  <line x1="0" y1="268.00" x2="800" y2="268.00" stroke="#eeeeee"/>
+  <line x1="0" y1="246.50" x2="800" y2="246.50" stroke="#eeeeee"/>
+  <line x1="0" y1="225.00" x2="800" y2="225.00" stroke="#eeeeee"/>
+  <line x1="0" y1="203.50" x2="800" y2="203.50" stroke="#eeeeee"/>
+  <line x1="0" y1="182.00" x2="800" y2="182.00" stroke="#eeeeee"/>
+  <line x1="0" y1="160.50" x2="800" y2="160.50" stroke="#eeeeee"/>
+  <line x1="0" y1="139.00" x2="800" y2="139.00" stroke="#eeeeee"/>
+  <line x1="0" y1="117.50" x2="800" y2="117.50" stroke="#eeeeee"/>
+  <line x1="0" y1="96.00" x2="800" y2="96.00" stroke="#eeeeee"/>
+  <line x1="0" y1="74.50" x2="800" y2="74.50" stroke="#eeeeee"/>
+  <line x1="0" y1="53.00" x2="800" y2="53.00" stroke="#eeeeee"/>
+  <line x1="0" y1="31.50" x2="800" y2="31.50" stroke="#eeeeee"/>
+  <line x1="0" y1="10.00" x2="800" y2="10.00" stroke="#eeeeee"/>
+  <line x1="0" y1="440.00" x2="800" y2="440.00" stroke="#cccccc"/>
+  <line x1="0" y1="332.50" x2="800" y2="332.50" stroke="#cccccc"/>
+  <line x1="0" y1="225.00" x2="800" y2="225.00" stroke="#cccccc"/>
+  <line x1="0" y1="117.50" x2="800" y2="117.50" stroke="#cccccc"/>
+  <line x1="0" y1="10.00" x2="800" y2="10.00" stroke="#cccccc"/>
+  <line x1="0" y1="225.00" x2="800" y2="225.00" stroke="#333" stroke-width="1.5"/>
+  <line x1="107.50" y1="0" x2="107.50" y2="450" stroke="#333" stroke-width="1.5"/>
+  <text x="10.00" y="241.00" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#444">-1</text>
+  <text x="205.00" y="241.00" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#444">1</text>
+  <text x="302.50" y="241.00" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#444">2</text>
+  <text x="400.00" y="241.00" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#444">3</text>
+  <text x="497.50" y="241.00" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#444">4</text>
+  <text x="595.00" y="241.00" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#444">5</text>
+  <text x="692.50" y="241.00" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#444">6</text>
+  <text x="790.00" y="241.00" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#444">7</text>
+  <text x="101.50" y="444.00" text-anchor="end" font-family="sans-serif" font-size="13" fill="#444">-2</text>
+  <text x="101.50" y="336.50" text-anchor="end" font-family="sans-serif" font-size="13" fill="#444">-1</text>
+  <text x="101.50" y="121.50" text-anchor="end" font-family="sans-serif" font-size="13" fill="#444">1</text>
+  <text x="101.50" y="14.00" text-anchor="end" font-family="sans-serif" font-size="13" fill="#444">2</text>
+  <text x="794" y="219.00" text-anchor="end" font-family="sans-serif" font-size="13" fill="#444" font-style="italic">x</text>
+  <text x="113.50" y="14" font-family="sans-serif" font-size="13" fill="#444" font-style="italic">y</text>
+</svg>

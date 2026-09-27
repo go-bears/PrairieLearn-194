@@ -1,0 +1,28 @@
+<div class="pl-tablet-input" data-pl-tablet-input="{{answer_name}}">
+  <div class="pl-tablet-input-toolbar" role="toolbar" aria-label="Tablet input tools">
+    <button type="button" class="btn btn-light border js-tablet-input-undo" aria-label="Undo last stroke" title="Undo last stroke" {{^editable}}disabled{{/editable}}>
+      <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+    </button>
+    <button type="button" class="btn btn-light border js-tablet-input-clear" aria-label="Clear tablet input" title="Clear tablet input" {{^editable}}disabled{{/editable}}>
+      <i class="bi bi-trash3" aria-hidden="true"></i>
+    </button>
+    {{#replay}}
+    <button type="button" class="btn btn-light border js-tablet-input-replay" aria-label="Play tablet input replay" title="Play tablet input replay">
+      <i class="bi bi-play-fill" aria-hidden="true"></i>
+    </button>
+    <label class="small text-muted mb-0" for="tablet-input-replay-time-{{answer_name}}">Replay</label>
+    <input id="tablet-input-replay-time-{{answer_name}}" class="js-tablet-input-replay-time" type="range" min="0" max="0" value="0" step="1" aria-label="Replay time">
+    <output class="small text-muted js-tablet-input-replay-label" aria-live="polite">0 ms</output>
+    {{/replay}}
+    {{#telemetry}}<span class="small text-muted" aria-live="polite">Pen data collected</span>{{/telemetry}}
+  </div>
+  <canvas class="pl-tablet-input-canvas" width="{{width}}" height="{{height}}" tabindex="0" aria-label="Tablet input canvas"></canvas>
+  <input type="hidden" name="{{answer_name}}" class="js-tablet-input-answer">
+</div>
+<script>
+  window.PLTabletInput && window.PLTabletInput.init(document.currentScript.previousElementSibling, {
+    width: {{width}}, height: {{height}}, maxPoints: {{max_points}}, telemetry: {{telemetry_json}},
+    strokeColor: "{{stroke_color}}", strokeWidth: {{stroke_width}}, editable: {{editable_json}},
+    initialAnswer: {{{initial_answer}}}, replay: {{replay}}
+  });
+</script>

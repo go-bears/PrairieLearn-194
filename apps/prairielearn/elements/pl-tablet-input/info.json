@@ -1,0 +1,7 @@
+{
+  "controller": "pl-tablet-input.py",
+  "dependencies": {
+    "elementScripts": ["pl-tablet-input.js"],
+    "elementStyles": ["pl-tablet-input.css"]
+  }
+}

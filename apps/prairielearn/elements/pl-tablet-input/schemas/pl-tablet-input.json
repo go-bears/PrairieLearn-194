@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "allow-blank": {
+      "type": "string",
+      "format": "boolean"
+    },
+    "answers-name": {
+      "type": "string"
+    },
+    "background-fit": {
+      "type": "string",
+      "enum": ["contain", "stretch"]
+    },
+    "background-image": {
+      "type": "string"
+    },
+    "grading": {
+      "type": "string",
+      "enum": ["overlap", "function"]
+    },
+    "height": {
+      "type": "string",
+      "format": "integer"
+    },
+    "max-points": {
+      "type": "string",
+      "format": "integer"
+    },
+    "partial-credit": {
+      "type": "string",
+      "format": "boolean"
+    },
+    "pass-threshold": {
+      "type": "string",
+      "format": "number"
+    },
+    "reference-file": {
+      "type": "string"
+    },
+    "stroke-color": {
+      "type": "string"
+    },
+    "stroke-width": {
+      "type": "string",
+      "format": "number"
+    },
+    "telemetry": {
+      "type": "string",
+      "format": "boolean"
+    },
+    "tolerance": {
+      "type": "string",
+      "format": "number"
+    },
+    "weight": {
+      "type": "string",
+      "format": "integer"
+    },
+    "width": {
+      "type": "string",
+      "format": "integer"
+    }
+  },
+  "required": ["answers-name"],
+  "additionalProperties": false
+}

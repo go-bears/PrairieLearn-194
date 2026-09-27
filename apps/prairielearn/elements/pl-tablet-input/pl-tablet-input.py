@@ -1,128 +1,221 @@
 import json
+import os
+import pathlib
+from dataclasses import dataclass
+from typing import Any
 
 import chevron
 import lxml.html
 import prairielearn as pl
+import tablet_ink as ink
 
-WIDTH_DEFAULT = 800
-HEIGHT_DEFAULT = 400
-MAX_POINTS_DEFAULT = 10000
-TELEMETRY_DEFAULT = False
+SCHEMA_PATH = pathlib.Path(__file__).parent / "schemas" / "pl-tablet-input.json"
+REFERENCE_COLOR = "#198754"
+
+
+@dataclass(frozen=True)
+class Settings:
+    name: str
+    width: int
+    height: int
+    max_points: int
+    telemetry: bool
+    allow_blank: bool
+    stroke_color: str
+    stroke_width: float
+    background_image: str | None
+    background_fit: str
+    reference_file: str | None
+    grading: str
+    tolerance: float
+    pass_threshold: float
+    partial_credit: bool
+    weight: int
+
+    @classmethod
+    def from_html(cls, element_html: str) -> "Settings":
+        e = lxml.html.fragment_fromstring(element_html)
+        return cls(
+            name=pl.get_string_attrib(e, "answers-name"),
+            width=pl.get_integer_attrib(e, "width", 800),
+            height=pl.get_integer_attrib(e, "height", 400),
+            max_points=pl.get_integer_attrib(e, "max-points", 10000),
+            telemetry=pl.get_boolean_attrib(e, "telemetry", False),
+            allow_blank=pl.get_boolean_attrib(e, "allow-blank", False),
+            stroke_color=pl.get_string_attrib(e, "stroke-color", "#111827"),
+            stroke_width=pl.get_float_attrib(e, "stroke-width", 2),
+            background_image=pl.get_string_attrib(e, "background-image", None),
+            background_fit=pl.get_string_attrib(e, "background-fit", "contain"),
+            reference_file=pl.get_string_attrib(e, "reference-file", None),
+            grading=pl.get_string_attrib(e, "grading", "overlap"),
+            tolerance=pl.get_float_attrib(e, "tolerance", 12),
+            pass_threshold=pl.get_float_attrib(e, "pass-threshold", 0.8),
+            partial_credit=pl.get_boolean_attrib(e, "partial-credit", True),
+            weight=pl.get_integer_attrib(e, "weight", 1),
+        )
+
+    def sample(self, answer: Any) -> ink.Points:
+        """Evenly spaced ink samples in canvas pixels, dense enough to resolve `tolerance`."""
+        return ink.resample(
+            ink.polylines(answer, self.width, self.height), self.tolerance / 3
+        )
+
+    def credit(self, match: ink.Match) -> float:
+        if match.f1 >= self.pass_threshold:
+            return 1.0
+        return match.f1 / self.pass_threshold if self.partial_credit else 0.0
 
 
 def prepare(element_html: str, data: pl.QuestionData) -> None:
-    element = lxml.html.fragment_fromstring(element_html)
-    pl.check_attribs(
-        element,
-        required_attribs=["answers-name"],
-        optional_attribs=[
-            "width",
-            "height",
-            "max-points",
-            "telemetry",
-            "allow-blank",
-            "stroke-color",
-            "stroke-width",
-        ],
-    )
+    pl.validate_element(lxml.html.fragment_fromstring(element_html), SCHEMA_PATH)
+    s = Settings.from_html(element_html)
+    pl.check_answers_names(data, s.name)
+    if min(s.width, s.height, s.max_points) <= 0:
+        raise ValueError("width, height, and max-points must be positive integers")
+    if s.tolerance <= 0 or not 0 < s.pass_threshold <= 1:
+        raise ValueError(
+            "tolerance must be positive and pass-threshold must be in (0, 1]"
+        )
+    if s.background_image:
+        _require_file(data["options"]["client_files_question_path"], s.background_image)
+    if s.reference_file and s.name not in data["correct_answers"]:
+        path = _require_file(data["options"]["question_path"], s.reference_file)
+        data["correct_answers"][s.name] = load_reference(path)
 
-    name = pl.get_string_attrib(element, "answers-name")
-    pl.check_answers_names(data, name)
-    width = pl.get_integer_attrib(element, "width", WIDTH_DEFAULT)
-    height = pl.get_integer_attrib(element, "height", HEIGHT_DEFAULT)
-    max_points = pl.get_integer_attrib(element, "max-points", MAX_POINTS_DEFAULT)
-    if width <= 0 or height <= 0:
-        raise ValueError("width and height must be positive integers")
-    if max_points <= 0:
-        raise ValueError("max-points must be a positive integer")
-    pl.get_boolean_attrib(element, "telemetry", TELEMETRY_DEFAULT)
-    pl.get_boolean_attrib(element, "allow-blank", False)
-    pl.get_float_attrib(element, "stroke-width", 2)
+
+def _require_file(directory: str, file_name: str) -> str:
+    path = os.path.join(directory, file_name)
+    if not os.path.isfile(path):
+        raise ValueError(f'pl-tablet-input could not find "{file_name}" in {directory}')
+    return path
+
+
+def load_reference(path: str) -> dict[str, Any]:
+    with open(path, encoding="utf-8") as file:
+        raw = json.load(file)
+    ink.polylines(raw, 1, 1)
+    reference = ink.compact(raw)
+    if not reference["strokes"]:
+        raise ValueError(f"The reference drawing {path} has no visible strokes")
+    return reference
 
 
 def render(element_html: str, data: pl.QuestionData) -> str:
-    element = lxml.html.fragment_fromstring(element_html)
-    answer_name = pl.get_string_attrib(element, "answers-name")
-    width = pl.get_integer_attrib(element, "width", WIDTH_DEFAULT)
-    height = pl.get_integer_attrib(element, "height", HEIGHT_DEFAULT)
-    max_points = pl.get_integer_attrib(element, "max-points", MAX_POINTS_DEFAULT)
-    telemetry = pl.get_boolean_attrib(element, "telemetry", TELEMETRY_DEFAULT)
-    editable = data["editable"] and data["panel"] == "question"
-    initial_answer = data["submitted_answers"].get(answer_name)
-    replay = (
-        not editable
-        and isinstance(initial_answer, dict)
-        and isinstance(initial_answer.get("strokes"), list)
+    s = Settings.from_html(element_html)
+    panel = data["panel"]
+    editable = data["editable"] and panel == "question"
+    answer = data["correct_answers" if panel == "answer" else "submitted_answers"].get(
+        s.name
     )
+    if panel == "answer" and answer is None:
+        return ""
 
-    params = {
-        "answer_name": answer_name,
-        "width": width,
-        "height": height,
-        "max_points": max_points,
-        "telemetry": telemetry,
-        "telemetry_json": json.dumps(telemetry),
+    replay = not editable and panel != "answer" and bool(ink.visible_strokes(answer))
+    partial_score = data["partial_scores"].get(s.name, {})
+    score = partial_score.get("score")
+    options = {
+        "width": s.width,
+        "height": s.height,
+        "maxPoints": s.max_points,
+        "telemetry": s.telemetry,
+        "strokeColor": REFERENCE_COLOR if panel == "answer" else s.stroke_color,
+        "strokeWidth": s.stroke_width,
         "editable": editable,
-        "editable_json": json.dumps(editable),
-        "stroke_color": pl.get_string_attrib(element, "stroke-color", "#111827"),
-        "stroke_width": pl.get_float_attrib(element, "stroke-width", 2),
-        "allow_blank": pl.get_boolean_attrib(element, "allow-blank", False),
-        "initial_answer": json.dumps(initial_answer),
-        "replay": json.dumps(replay),
+        "replay": replay,
+        "initialAnswer": answer if isinstance(answer, dict) else None,
+    }
+    params = {
+        "name": s.name,
+        "width": s.width,
+        "height": s.height,
+        "editable": editable,
+        "telemetry": s.telemetry and editable,
+        "replay": replay,
+        "reference": panel == "answer",
+        "background_url": s.background_image
+        and f"{data['options']['client_files_question_url']}/{s.background_image}",
+        "background_fit": "fill" if s.background_fit == "stretch" else "contain",
+        "options_json": json.dumps(options),
+        "submission": panel == "submission",
+        "feedback": partial_score.get("feedback"),
+        "format_error": data["format_errors"].get(s.name),
+        **(dict([pl.determine_score_params(score)]) if score is not None else {}),
     }
     with open("pl-tablet-input.mustache", encoding="utf-8") as file:
         return chevron.render(file, params).strip()
 
 
 def parse(element_html: str, data: pl.QuestionData) -> None:
-    element = lxml.html.fragment_fromstring(element_html)
-    name = pl.get_string_attrib(element, "answers-name")
-    allow_blank = pl.get_boolean_attrib(element, "allow-blank", False)
-    raw_answer = data["submitted_answers"].get(name)
-    if not raw_answer:
-        if not allow_blank:
-            data["format_errors"][name] = "A tablet input response is required."
-        return
-
+    s = Settings.from_html(element_html)
     try:
-        answer = json.loads(raw_answer) if isinstance(raw_answer, str) else raw_answer
-    except (TypeError, ValueError):
-        data["format_errors"][name] = "The tablet input response is not valid JSON."
-        return
-
-    if not isinstance(answer, dict) or answer.get("version") != 1:
-        data["format_errors"][name] = (
-            "The tablet input response has an unsupported format."
+        data["submitted_answers"][s.name] = parse_answer(
+            data["submitted_answers"].get(s.name), s
         )
-        return
-    if not isinstance(answer.get("strokes"), list):
-        data["format_errors"][name] = "The tablet input response must contain strokes."
-        return
+    except ValueError as exc:
+        data["format_errors"][s.name] = str(exc)
 
-    max_points = pl.get_integer_attrib(element, "max-points", MAX_POINTS_DEFAULT)
+
+def parse_answer(raw: Any, s: Settings) -> dict[str, Any]:
+    try:
+        answer = json.loads(raw) if isinstance(raw, str) and raw else raw
+    except json.JSONDecodeError as exc:
+        raise ValueError("The tablet input response is not valid JSON.") from exc
+    answer: Any = answer or {"version": 1, "strokes": []}
     if (
-        sum(
-            len(stroke.get("points", []))
-            for stroke in answer["strokes"]
-            if isinstance(stroke, dict)
-        )
-        > max_points
+        not isinstance(answer, dict)
+        or answer.get("version") != 1
+        or not isinstance(answer.get("strokes"), list)
     ):
-        data["format_errors"][name] = (
-            "The tablet input response contains too many points."
-        )
+        raise ValueError("The tablet input response has an unsupported format.")
+    point_count = sum(
+        len(stroke["points"])
+        for stroke in answer["strokes"]
+        if isinstance(stroke, dict) and isinstance(stroke.get("points"), list)
+    )
+    if point_count > s.max_points:
+        raise ValueError("The tablet input response contains too many points.")
+    if not ink.polylines(answer, 1, 1) and not s.allow_blank:
+        raise ValueError("Draw your answer on the canvas before submitting.")
+    return answer
+
+
+def grade(element_html: str, data: pl.QuestionData) -> None:
+    s = Settings.from_html(element_html)
+    reference = data["correct_answers"].get(s.name)
+    if reference is None:
         return
-    data["submitted_answers"][name] = answer
+    reference_ink = s.sample(reference)
+
+    def grade_function(answer: Any) -> tuple[float, str]:
+        match = ink.match(s.sample(answer), reference_ink, s.grading, s.tolerance)
+        return s.credit(match), (
+            f"Your drawing covers {match.recall:.0%} of the expected answer, "
+            f"and {match.precision:.0%} of your ink is on it."
+        )
+
+    pl.grade_answer_parameterized(data, s.name, grade_function, weight=s.weight)
 
 
 def test(element_html: str, data: pl.ElementTestData) -> None:
-    element = lxml.html.fragment_fromstring(element_html)
-    name = pl.get_string_attrib(element, "answers-name")
-    if data["test_type"] == "invalid":
-        data["raw_submitted_answers"][name] = '{"version": 1}'
+    s = Settings.from_html(element_html)
+    reference = data["correct_answers"].get(s.name)
+    test_type = data["test_type"]
+
+    if test_type == "invalid":
+        data["raw_submitted_answers"][s.name] = '{"version": 1}'
+        data["format_errors"][s.name] = "invalid"
+    elif reference is None:
+        # Nothing to grade against; server.py must generate test answers.
+        return
+    elif test_type == "correct":
+        data["raw_submitted_answers"][s.name] = json.dumps(reference)
+        data["partial_scores"][s.name] = {"score": 1, "weight": s.weight}
     else:
-        data["raw_submitted_answers"][name] = json.dumps({
+        x, y = ink.emptiest_point(s.sample(reference), s.width, s.height)
+        dx = s.tolerance / (2 * s.width)
+        stray = {"points": [{"x": x - dx, "y": y}, {"x": x + dx, "y": y}]}
+        data["raw_submitted_answers"][s.name] = json.dumps({
             "version": 1,
-            "canvas": {"width": 800, "height": 400},
-            "strokes": [],
+            "strokes": [stray],
         })
+        data["partial_scores"][s.name] = {"score": 0, "weight": s.weight}

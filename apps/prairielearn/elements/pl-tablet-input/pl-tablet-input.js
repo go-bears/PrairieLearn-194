@@ -1,240 +1,208 @@
 (function () {
-  function init(root, options) {
-    const canvas = root.querySelector('.pl-tablet-input-canvas');
-    const answerInput = root.querySelector('.js-tablet-input-answer');
-    const undoButton = root.querySelector('.js-tablet-input-undo');
-    const clearButton = root.querySelector('.js-tablet-input-clear');
-    const context = canvas.getContext('2d');
-    const strokes = [];
-    const events = [];
-    let activeStroke = null;
-    const responseStartedAt = performance.now();
-    let replayFrame = null;
-    let replayPlaying = false;
+  const round = (value, digits) => Math.round(value * 10 ** digits) / 10 ** digits;
+  const clamp01 = (value) => Math.max(0, Math.min(1, value));
 
-    function elapsedTime() {
-      return Math.max(0, Math.round(performance.now() - responseStartedAt));
+  /** Draws strokes with normalized coordinates onto a canvas of logical size width × height. */
+  function createRenderer(canvas, { width, height, strokeColor, strokeWidth }) {
+    const context = canvas.getContext('2d');
+    Object.assign(context, {
+      strokeStyle: strokeColor,
+      lineWidth: strokeWidth,
+      lineCap: 'round',
+      lineJoin: 'round',
+    });
+
+    function segment(from, to) {
+      context.beginPath();
+      context.moveTo(from.x * width, from.y * height);
+      context.lineTo(to.x * width, to.y * height);
+      context.stroke();
     }
 
-    function pointFromEvent(event) {
+    /** Redraws every stroke as it appeared at `time` ms into the response. */
+    function strokes(list, time = Infinity) {
+      context.clearRect(0, 0, width, height);
+      for (const stroke of list) {
+        if ((stroke.startedAt ?? 0) > time || (stroke.undone && (stroke.undoneAt ?? 0) <= time)) {
+          continue;
+        }
+        const points = stroke.points.filter((point) => (point.dt ?? 0) <= time);
+        points.forEach((point, index) => segment(points[index - 1] ?? point, point));
+      }
+    }
+
+    return { segment, strokes };
+  }
+
+  /** Records pointer strokes and their editing history, resuming from a saved answer. */
+  function createRecorder(canvas, options, renderer, onChange) {
+    const initial = options.initialAnswer;
+    const clockStart = performance.now() - (initial?.responseDuration ?? 0);
+    const now = () => Math.round(performance.now() - clockStart);
+    const strokes = (initial?.strokes ?? []).map((stroke) => ({ ...stroke }));
+    const events = [...(initial?.events ?? [])];
+    let active = null;
+    let activePointerId = null;
+    // Other pointers (e.g. a palm resting on a tablet) must not add ink to the pen's stroke.
+    const isActivePointer = (event) => active && event.pointerId === activePointerId;
+
+    const pointCount = () => strokes.reduce((total, stroke) => total + stroke.points.length, 0);
+    const visibleIndices = () => strokes.flatMap((stroke, index) => (stroke.undone ? [] : [index]));
+
+    function log(type, details = {}) {
+      events.push({ type, at: now(), ...details });
+      onChange();
+    }
+
+    function pointFrom(event) {
       const bounds = canvas.getBoundingClientRect();
+      const point = {
+        x: round(clamp01((event.clientX - bounds.left) / bounds.width), 4),
+        y: round(clamp01((event.clientY - bounds.top) / bounds.height), 4),
+      };
+      if (!options.telemetry) return point;
       return {
-        x: Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width)),
-        y: Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height)),
-        dt: elapsedTime(),
-        p: Math.round(Math.max(0, Math.min(1, event.pressure || 0)) * 1000) / 1000,
-        tx: Number.isFinite(event.tiltX) ? event.tiltX : 0,
-        ty: Number.isFinite(event.tiltY) ? event.tiltY : 0,
+        ...point,
+        dt: now(),
+        p: round(clamp01(event.pressure || 0), 3),
+        tx: event.tiltX || 0,
+        ty: event.tiltY || 0,
         pointerType: event.pointerType || 'unknown',
       };
     }
 
-    function drawPoint(point, previous) {
-      context.strokeStyle = options.strokeColor;
-      context.lineWidth = options.strokeWidth;
-      context.lineCap = 'round';
-      context.lineJoin = 'round';
-      context.beginPath();
-      if (previous) {
-        context.moveTo(previous.x * options.width, previous.y * options.height);
+    function extend(event) {
+      const coalesced = event.getCoalescedEvents?.() ?? [];
+      for (const sample of coalesced.length > 0 ? coalesced : [event]) {
+        if (pointCount() >= options.maxPoints) return;
+        const point = pointFrom(sample);
+        renderer.segment(active.points.at(-1) ?? point, point);
+        active.points.push(point);
+      }
+    }
+
+    function finish(event) {
+      if (!isActivePointer(event)) return;
+      const cancelled = event.type === 'pointercancel';
+      if (!cancelled) extend(event);
+      const strokeIndex = strokes.indexOf(active);
+      if (active.points.length === 0) {
+        strokes.splice(strokeIndex, 1);
+        log('stroke-cancel', { empty: true });
       } else {
-        context.moveTo(point.x * options.width, point.y * options.height);
+        const endedAt = now();
+        Object.assign(active, { endedAt, duration: endedAt - active.startedAt, cancelled });
+        log(cancelled ? 'stroke-cancel' : 'stroke-end', { at: endedAt, strokeIndex });
       }
-      context.lineTo(point.x * options.width, point.y * options.height);
-      context.stroke();
+      active = null;
     }
 
-    function redraw() {
-      context.clearRect(0, 0, options.width, options.height);
-      strokes
-        .filter((stroke) => !stroke.undone)
-        .forEach((stroke) => stroke.points.forEach((point, index) => drawPoint(point, stroke.points[index - 1])));
-    }
-
-    function drawReplay(answer, time) {
-      context.clearRect(0, 0, options.width, options.height);
-      const replayEvents = Array.isArray(answer?.events) ? answer.events : [];
-      (answer?.strokes ?? []).forEach((stroke, strokeIndex) => {
-        if ((stroke.startedAt ?? 0) > time) return;
-        const undoneByEvent = replayEvents.some(
-          (event) =>
-            event.at <= time &&
-            (event.type === 'undo' || event.type === 'clear') &&
-            event.strokeIndex === strokeIndex,
-        );
-        if (stroke.undoneAt <= time || undoneByEvent) return;
-        const points = stroke.points.filter((point) => point.dt <= time);
-        points.forEach((point, index) => drawPoint(point, points[index - 1]));
-      });
-    }
-
-    function setupReplay(answer) {
-      const replayButton = root.querySelector('.js-tablet-input-replay');
-      const replayTime = root.querySelector('.js-tablet-input-replay-time');
-      const replayLabel = root.querySelector('.js-tablet-input-replay-label');
-      if (!options.replay || !replayButton || !replayTime || !replayLabel) return;
-
-      const duration = Math.max(
-        0,
-        answer?.responseDuration ??
-          Math.max(0, ...(answer?.strokes ?? []).flatMap((stroke) => stroke.points.map((point) => point.dt))),
-      );
-      replayTime.max = String(duration);
-
-      function renderAt(time) {
-        const roundedTime = Math.max(0, Math.min(duration, Math.round(time)));
-        replayTime.value = String(roundedTime);
-        replayLabel.value = `${roundedTime} ms`;
-        drawReplay(answer, roundedTime);
+    function hide(type, indices) {
+      const at = now();
+      for (const strokeIndex of indices) {
+        Object.assign(strokes[strokeIndex], { undone: true, undoneAt: at });
+        events.push({ type, at, strokeIndex });
       }
-
-      function stopReplay() {
-        replayPlaying = false;
-        if (replayFrame !== null) cancelAnimationFrame(replayFrame);
-        replayFrame = null;
-        replayButton.innerHTML = '<i class="bi bi-play-fill" aria-hidden="true"></i>';
-        replayButton.setAttribute('aria-label', 'Play tablet input replay');
-      }
-
-      function playReplay(startTime) {
-        const startedAt = performance.now() - startTime;
-        replayPlaying = true;
-
-        replayButton.innerHTML = '<i class="bi bi-pause-fill" aria-hidden="true"></i>';
-        replayButton.setAttribute('aria-label', 'Pause tablet input replay');
-        function frame(now) {
-          const time = now - startedAt;
-          renderAt(time);
-          if (time < duration && replayPlaying) {
-            replayFrame = requestAnimationFrame(frame);
-          } else {
-            stopReplay();
-          }
-        }
-        replayFrame = requestAnimationFrame(frame);
-      }
-
-      replayButton.addEventListener('click', () => {
-        if (replayPlaying) {
-          stopReplay();
-        } else {
-          const currentTime = Number(replayTime.value);
-          playReplay(currentTime >= duration ? 0 : currentTime);
-        }
-      });
-      replayTime.addEventListener('input', () => {
-        stopReplay();
-        renderAt(Number(replayTime.value));
-      });
-      renderAt(duration);
-    }
-
-    function updateAnswer() {
-      answerInput.value = JSON.stringify({
-        version: 1,
-        canvas: { width: options.width, height: options.height },
-        responseDuration: elapsedTime(),
-        events,
-        strokes: options.telemetry
-          ? strokes
-          : strokes.map(({ startedAt, endedAt, duration, cancelled, points }) => ({
-              startedAt,
-              endedAt,
-              duration,
-              cancelled,
-              undone,
-              undoneAt,
-              points: points.map(({ x, y }) => ({ x, y })),
-            })),
-      });
-    }
-
-    function restoreAnswer(answer) {
-      if (!answer || !Array.isArray(answer.strokes)) return;
-      answer.strokes.forEach((stroke) => {
-        if (!stroke || !Array.isArray(stroke.points)) return;
-        const restoredStroke = { ...stroke };
-        strokes.push(restoredStroke);
-        if (!restoredStroke.undone) {
-          restoredStroke.points.forEach((point, index) => drawPoint(point, restoredStroke.points[index - 1]));
-        }
-      });
-    }
-
-    function addEvents(events) {
-      events.forEach((event) => {
-        if (activeStroke && activeStroke.points.length < options.maxPoints) {
-          const point = pointFromEvent(event);
-          activeStroke.points.push(point);
-          drawPoint(point, activeStroke.points[activeStroke.points.length - 2]);
-        }
-      });
+      renderer.strokes(strokes);
+      onChange();
     }
 
     canvas.addEventListener('pointerdown', (event) => {
-      if (!options.editable || activeStroke) return;
+      if (active) return;
       event.preventDefault();
       canvas.setPointerCapture(event.pointerId);
-      activeStroke = { startedAt: elapsedTime(), points: [] };
-      strokes.push(activeStroke);
-      events.push({ type: 'stroke-start', at: activeStroke.startedAt });
-      addEvents([event]);
-      updateAnswer();
+      activePointerId = event.pointerId;
+      active = { startedAt: now(), points: [] };
+      strokes.push(active);
+      extend(event);
+      log('stroke-start', { at: active.startedAt, strokeIndex: strokes.length - 1 });
     });
     canvas.addEventListener('pointermove', (event) => {
-      if (!activeStroke) return;
+      if (!isActivePointer(event)) return;
       event.preventDefault();
-      addEvents(event.getCoalescedEvents ? event.getCoalescedEvents() : [event]);
+      extend(event);
     });
+    canvas.addEventListener('pointerup', finish);
+    canvas.addEventListener('pointercancel', finish);
+    renderer.strokes(strokes);
 
-    function finishStroke(event) {
-      if (!activeStroke) return;
-
-      if (event.type !== 'pointercancel') addEvents([event]);
-      if (activeStroke.points.length === 0) {
-        strokes.pop();
-        events.push({ type: 'stroke-cancel', at: elapsedTime(), empty: true });
-      } else {
-        activeStroke.endedAt = elapsedTime();
-        activeStroke.duration = activeStroke.endedAt - activeStroke.startedAt;
-        activeStroke.cancelled = event.type === 'pointercancel';
-        events.push({
-          type: activeStroke.cancelled ? 'stroke-cancel' : 'stroke-end',
-          at: activeStroke.endedAt,
-          strokeIndex: strokes.length - 1,
-        });
-      }
-      activeStroke = null;
-      updateAnswer();
-    }
-    canvas.addEventListener('pointerup', finishStroke);
-    canvas.addEventListener('pointercancel', finishStroke);
-    undoButton.addEventListener('click', () => {
-      const strokeIndex = strokes.findLastIndex((stroke) => !stroke.undone);
-      if (strokeIndex === -1) return;
-      const stroke = strokes[strokeIndex];
-      stroke.undone = true;
-      stroke.undoneAt = elapsedTime();
-      events.push({ type: 'undo', at: stroke.undoneAt, strokeIndex });
-      redraw();
-      updateAnswer();
-    });
-    clearButton.addEventListener('click', () => {
-      const at = elapsedTime();
-      strokes.forEach((stroke, strokeIndex) => {
-        if (!stroke.undone) {
-          stroke.undone = true;
-          stroke.undoneAt = at;
-          events.push({ type: 'clear', at, strokeIndex });
-        }
-      });
-      redraw();
-      updateAnswer();
-    });
-    restoreAnswer(options.initialAnswer);
-    setupReplay(options.initialAnswer);
-    updateAnswer();
+    return {
+      undo: () => hide('undo', visibleIndices().slice(-1)),
+      clear: () => hide('clear', visibleIndices()),
+      serialize: () => ({
+        version: 1,
+        canvas: { width: options.width, height: options.height },
+        responseDuration: now(),
+        events,
+        strokes,
+      }),
+    };
   }
 
-  window.PLTabletInput = { init };
+  /** Scrubbable playback of a submitted answer's strokes over time. */
+  function setupReplay(root, answer, renderer) {
+    const [button, slider, label] = ['replay', 'replay-time', 'replay-label'].map((name) =>
+      root.querySelector(`.js-tablet-input-${name}`),
+    );
+    const duration =
+      answer.responseDuration ??
+      Math.max(0, ...answer.strokes.map((stroke) => stroke.endedAt ?? 0));
+    let frame = null;
+    slider.max = String(duration);
+
+    function renderAt(time) {
+      const clamped = Math.max(0, Math.min(duration, Math.round(time)));
+      slider.value = String(clamped);
+      label.value = `${(clamped / 1000).toFixed(1)} s`;
+      renderer.strokes(answer.strokes, clamped);
+    }
+
+    function showPlaying(playing) {
+      const verb = playing ? 'pause' : 'play';
+      button.innerHTML = `<i class="bi bi-${verb}-fill" aria-hidden="true"></i>`;
+      button.setAttribute('aria-label', `${playing ? 'Pause' : 'Play'} tablet input replay`);
+    }
+
+    function stop() {
+      cancelAnimationFrame(frame);
+      frame = null;
+      showPlaying(false);
+    }
+
+    function play() {
+      const from = Number(slider.value) >= duration ? 0 : Number(slider.value);
+      const origin = performance.now() - from;
+      const tick = (timestamp) => {
+        renderAt(timestamp - origin);
+        if (timestamp - origin < duration) frame = requestAnimationFrame(tick);
+        else stop();
+      };
+      showPlaying(true);
+      frame = requestAnimationFrame(tick);
+    }
+
+    button.addEventListener('click', () => (frame === null ? play() : stop()));
+    slider.addEventListener('input', () => {
+      stop();
+      renderAt(Number(slider.value));
+    });
+    renderAt(duration);
+  }
+
+  function init(root) {
+    const options = JSON.parse(root.dataset.options);
+    const canvas = root.querySelector('.pl-tablet-input-canvas');
+    const renderer = createRenderer(canvas, options);
+    if (options.replay) return setupReplay(root, options.initialAnswer, renderer);
+    if (!options.editable) return renderer.strokes(options.initialAnswer?.strokes ?? []);
+
+    const input = root.querySelector('.js-tablet-input-answer');
+    const save = () => (input.value = JSON.stringify(recorder.serialize()));
+    const recorder = createRecorder(canvas, options, renderer, save);
+    root.querySelector('.js-tablet-input-undo').addEventListener('click', recorder.undo);
+    root.querySelector('.js-tablet-input-clear').addEventListener('click', recorder.clear);
+    save();
+  }
+
+  window.PLTabletInput = { init, createRenderer, createRecorder };
 })();

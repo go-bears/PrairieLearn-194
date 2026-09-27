@@ -9,11 +9,32 @@
   margin-bottom: 0.5rem;
 }
 
+.pl-tablet-input-surface {
+  position: relative;
+  background: #fff;
+  border: 1px solid var(--bs-border-color, #dee2e6);
+}
+
+.pl-tablet-input-background {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  user-select: none;
+}
+
+.pl-tablet-input-background-contain {
+  object-fit: contain;
+}
+
+.pl-tablet-input-background-fill {
+  object-fit: fill;
+}
+
 .pl-tablet-input-canvas {
+  position: relative;
   display: block;
   width: 100%;
-  max-width: 100%;
-  border: 1px solid var(--bs-border-color, #dee2e6);
-  background: #fff;
   touch-action: none;
 }

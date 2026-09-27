@@ -226,6 +226,10 @@
       "schema": "./apps/prairielearn/elements/pl-symbolic-input/schemas/pl-symbolic-input.json"
     },
     {
+      "name": "pl-tablet-input",
+      "schema": "./apps/prairielearn/elements/pl-tablet-input/schemas/pl-tablet-input.json"
+    },
+    {
       "name": "pl-code",
       "display": "block",
       "languageAttribute": "language",

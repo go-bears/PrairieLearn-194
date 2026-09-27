@@ -8,6 +8,7 @@ import { element as plNumberInput } from './elements/pl-number-input.js';
 import { element as plOrderBlocks } from './elements/pl-order-blocks.js';
 import { element as plStringInput } from './elements/pl-string-input.js';
 import { element as plSymbolicInput } from './elements/pl-symbolic-input.js';
+import { element as plTabletInput } from './elements/pl-tablet-input.js';
 import type { ElementSchemaModule } from './types.js';
 
 export const elementModules: ElementSchemaModule[] = [
@@ -18,4 +19,5 @@ export const elementModules: ElementSchemaModule[] = [
   plOrderBlocks,
   plStringInput,
   plSymbolicInput,
+  plTabletInput,
 ];

@@ -8,7 +8,7 @@ import { z } from 'zod';
 
 export const DRAWING_TEMPLATE_QID = 'template/tablet-input/drawing';
 export const REFERENCE_FILE_NAME = 'reference.json';
-const MAX_CANVAS_DIMENSION = 1600;
+export const MAX_CANVAS_DIMENSION = 1600;
 /** Base64-encoded, this keeps the save request under the 5 MB JSON body limit. */
 export const MAX_BACKGROUND_IMAGE_BYTES = 3 * 1024 * 1024;
 export const BACKGROUND_IMAGE_TYPES = [
@@ -24,6 +24,47 @@ const backgroundImageTypes = new Set<string>(BACKGROUND_IMAGE_TYPES);
 export function isBackgroundImageType(type: string): type is BackgroundImageType {
   return backgroundImageTypes.has(type);
 }
+
+/** Grids shipped in `elements/pl-tablet-input/clientFilesElement/`, copied into a question when chosen. */
+const BuiltInBackgroundIdSchema = z.enum(['grid-paper', 'grid-axes']);
+export type BuiltInBackgroundId = z.infer<typeof BuiltInBackgroundIdSchema>;
+export const BUILT_IN_BACKGROUND_IDS = BuiltInBackgroundIdSchema.options;
+export const BUILT_IN_BACKGROUNDS: Record<
+  BuiltInBackgroundId,
+  { label: string; fileName: string; canvas: { width: number; height: number } }
+> = {
+  'grid-paper': {
+    label: 'Grid paper',
+    fileName: 'grid-paper.png',
+    canvas: { width: 800, height: 600 },
+  },
+  'grid-axes': {
+    label: 'Grid with axes (1 square = 1 unit)',
+    fileName: 'grid-axes.png',
+    canvas: { width: 800, height: 600 },
+  },
+};
+
+export function builtInBackgroundForFile(fileName: string | null): BuiltInBackgroundId | null {
+  return (
+    BUILT_IN_BACKGROUND_IDS.find((id) => BUILT_IN_BACKGROUNDS[id].fileName === fileName) ?? null
+  );
+}
+
+/** The background the instructor picked in the builder. */
+export const BackgroundInputSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('none') }),
+  z.object({ kind: z.literal('builtIn'), id: BuiltInBackgroundIdSchema }),
+  /** A custom image already in `clientFilesQuestion/`. */
+  z.object({ kind: z.literal('existing'), fileName: z.string().min(1) }),
+  z.object({
+    kind: z.literal('upload'),
+    name: z.string().min(1),
+    type: z.enum(BACKGROUND_IMAGE_TYPES),
+    contentBase64: z.string(),
+  }),
+]);
+export type BackgroundInput = z.infer<typeof BackgroundInputSchema>;
 
 const CanvasDimensionSchema = z.number().int().positive().max(MAX_CANVAS_DIMENSION);
 
@@ -56,11 +97,14 @@ export const ReferenceDrawingSchema = z.object({
 });
 export type ReferenceDrawing = z.infer<typeof ReferenceDrawingSchema>;
 
-/** Mirrors the `pl-tablet-input` attribute defaults. */
+/** The `pl-tablet-input` canvas size when `width` and `height` are omitted. */
+export const ELEMENT_DEFAULT_CANVAS = { width: 800, height: 400 };
+
+/** Grading settings mirror the `pl-tablet-input` attribute defaults. */
 export const DEFAULT_DRAWING_QUESTION: DrawingQuestion = {
   prompt: '',
-  canvas: { width: 800, height: 400 },
-  backgroundImage: null,
+  canvas: BUILT_IN_BACKGROUNDS['grid-paper'].canvas,
+  backgroundImage: BUILT_IN_BACKGROUNDS['grid-paper'].fileName,
   telemetry: true,
   grading: {
     autograde: true,

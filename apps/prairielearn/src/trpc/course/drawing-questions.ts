@@ -9,12 +9,15 @@ import { throwAppError } from '@prairielearn/trpc/server';
 import { IdSchema } from '@prairielearn/zod';
 
 import {
+  builtInBackgroundPath,
   drawingQuestionFiles,
   readDrawingQuestion,
   sanitizeImageFileName,
 } from '../../lib/drawing-question.js';
 import {
-  BACKGROUND_IMAGE_TYPES,
+  BUILT_IN_BACKGROUNDS,
+  type BackgroundInput,
+  BackgroundInputSchema,
   DrawingQuestionSchema,
   MAX_BACKGROUND_IMAGE_BYTES,
   ReferenceDrawingSchema,
@@ -77,22 +80,50 @@ async function prepareAssessmentPointsEditor({
   return prepared.editor;
 }
 
+/** The background's file name in `clientFilesQuestion/`, and its contents if it must be written. */
+async function resolveBackground(
+  background: BackgroundInput,
+  questionPath: string,
+): Promise<{
+  backgroundImage: string | null;
+  image: { fileName: string; contents: Buffer } | null;
+}> {
+  switch (background.kind) {
+    case 'none':
+      return { backgroundImage: null, image: null };
+    case 'builtIn': {
+      const { fileName } = BUILT_IN_BACKGROUNDS[background.id];
+      const contents = await fs.readFile(builtInBackgroundPath(background.id));
+      return { backgroundImage: fileName, image: { fileName, contents } };
+    }
+    case 'existing': {
+      const { fileName } = background;
+      const exists =
+        path.basename(fileName) === fileName &&
+        (await fs.pathExists(path.join(questionPath, 'clientFilesQuestion', fileName)));
+      if (!exists) throw badRequest(`The background image "${fileName}" no longer exists.`);
+      return { backgroundImage: fileName, image: null };
+    }
+    case 'upload': {
+      const fileName = sanitizeImageFileName(background.name);
+      const contents = Buffer.from(background.contentBase64, 'base64');
+      if (contents.length > MAX_BACKGROUND_IMAGE_BYTES) {
+        throw badRequest('The background image is too large.');
+      }
+      return { backgroundImage: fileName, image: { fileName, contents } };
+    }
+  }
+}
+
 const save = t.procedure
   .use(requireCoursePermissionEdit)
   .use(requireNotExampleCourse)
   .input(
     z.object({
       questionId: IdSchema,
-      question: DrawingQuestionSchema,
+      question: DrawingQuestionSchema.omit({ backgroundImage: true }),
+      background: BackgroundInputSchema,
       reference: ReferenceDrawingSchema.nullable(),
-      /** A new background image, replacing `question.backgroundImage`. */
-      image: z
-        .object({
-          name: z.string().min(1),
-          type: z.enum(BACKGROUND_IMAGE_TYPES),
-          contentBase64: z.string(),
-        })
-        .nullable(),
       assessment: z
         .object({ assessmentId: IdSchema, points: z.number().positive().max(1000) })
         .nullable(),
@@ -109,21 +140,7 @@ const save = t.procedure
     const questionPath = path.join(ctx.course.path, 'questions', question.qid);
     const { autograde } = input.question.grading;
 
-    const image = input.image && {
-      fileName: sanitizeImageFileName(input.image.name),
-      contents: Buffer.from(input.image.contentBase64, 'base64'),
-    };
-    if (image && image.contents.length > MAX_BACKGROUND_IMAGE_BYTES) {
-      throw badRequest('The background image is too large.');
-    }
-    const backgroundImage = image?.fileName ?? input.question.backgroundImage;
-    if (
-      !image &&
-      backgroundImage &&
-      !(await fs.pathExists(path.join(questionPath, 'clientFilesQuestion', backgroundImage)))
-    ) {
-      throw badRequest(`The background image "${backgroundImage}" no longer exists.`);
-    }
+    const { backgroundImage, image } = await resolveBackground(input.background, questionPath);
     if (autograde && !input.reference) {
       throw badRequest('Draw a reference answer to enable autograding.');
     }

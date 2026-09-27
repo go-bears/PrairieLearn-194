@@ -12,6 +12,11 @@ import { extractPageContext } from '../../lib/client/page-context.js';
 import { getCourseTrpcUrl } from '../../lib/client/url.js';
 import { config } from '../../lib/config.js';
 import { readDrawingQuestion } from '../../lib/drawing-question.js';
+import {
+  BUILT_IN_BACKGROUNDS,
+  BUILT_IN_BACKGROUND_IDS,
+  type BuiltInBackgroundId,
+} from '../../lib/drawing-question.shared.js';
 import { typedAsyncHandler } from '../../lib/res-locals.js';
 import { createAuthzMiddleware } from '../../middlewares/authzHelper.js';
 import {
@@ -66,6 +71,15 @@ router.get(
       )
     ).flat();
 
+    const builtInBackgroundUrls = Object.fromEntries(
+      BUILT_IN_BACKGROUND_IDS.map((id) => [
+        id,
+        coreElementAssetPath(
+          `pl-tablet-input/clientFilesElement/${BUILT_IN_BACKGROUNDS[id].fileName}`,
+        ),
+      ]),
+    ) as Record<BuiltInBackgroundId, string>;
+
     const trpcCsrfToken = generatePrefixCsrfToken(
       { url: getCourseTrpcUrl(course.id), authn_user_id: res.locals.authn_user.id },
       config.secretKey,
@@ -97,6 +111,7 @@ router.get(
               initialReference={state.reference}
               hasUnmanagedContent={state.hasUnmanagedContent}
               assessments={assessments}
+              builtInBackgroundUrls={builtInBackgroundUrls}
             />
           </Hydrate>
         ),

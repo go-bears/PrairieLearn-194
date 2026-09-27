@@ -30,7 +30,7 @@ Place the background image in `clientFilesQuestion/` and the reference drawing n
 Instead of writing these files by hand, create a question from the **Drawing** template on the **Create question** page, or click **Edit drawing question** on the preview of any question that uses `pl-tablet-input`. The builder lets you:
 
 - write the prompt in Markdown with LaTeX math,
-- upload a background image (the canvas takes the image's proportions),
+- choose a background: grid paper (the default, 800 × 600 px with 20 px squares), a grid with axes (one square per unit, x from −20 to 20 and y from −15 to 15), your own image, or none. The canvas takes the background's proportions, up to 1600 px on the longer side, and the chosen image is copied into `clientFilesQuestion/`,
 - draw the answer key with a pen, mouse, or touchscreen,
 - choose automatic or manual grading and the grading settings below, and
 - add the question to an assessment with a number of points.

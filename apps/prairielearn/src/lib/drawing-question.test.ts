@@ -5,13 +5,20 @@ import fs from 'fs-extra';
 import { afterEach, assert, beforeEach, describe, it } from 'vitest';
 
 import {
+  builtInBackgroundPath,
   drawingQuestionFiles,
   parseDrawingQuestionHtml,
   readDrawingQuestion,
   renderDrawingQuestionHtml,
   sanitizeImageFileName,
 } from './drawing-question.js';
-import { DEFAULT_DRAWING_QUESTION, type DrawingQuestion } from './drawing-question.shared.js';
+import {
+  BUILT_IN_BACKGROUND_IDS,
+  DEFAULT_DRAWING_QUESTION,
+  type DrawingQuestion,
+  ELEMENT_DEFAULT_CANVAS,
+  builtInBackgroundForFile,
+} from './drawing-question.shared.js';
 
 const QUESTION: DrawingQuestion = {
   prompt: 'Graph $y = 2x - 1$.\n\nUse the grid.',
@@ -78,7 +85,7 @@ describe('parseDrawingQuestionHtml', () => {
     );
     assert.isNotNull(parsed);
     assert.equal(parsed.question.prompt, '<p>Draw a circle.</p>');
-    assert.deepEqual(parsed.question.canvas, DEFAULT_DRAWING_QUESTION.canvas);
+    assert.deepEqual(parsed.question.canvas, ELEMENT_DEFAULT_CANVAS);
     assert.isFalse(parsed.question.telemetry);
     assert.isFalse(parsed.hasOtherContent);
   });
@@ -94,6 +101,16 @@ describe('parseDrawingQuestionHtml', () => {
 
   it('returns null without exactly one pl-tablet-input', () => {
     assert.isNull(parseDrawingQuestionHtml('<p>Hello</p>', { autograde: true }));
+  });
+});
+
+describe('built-in backgrounds', () => {
+  it('ship with pl-tablet-input and are recognized by file name', async () => {
+    for (const id of BUILT_IN_BACKGROUND_IDS) {
+      assert.isTrue(await fs.pathExists(builtInBackgroundPath(id)));
+      assert.equal(builtInBackgroundForFile(path.basename(builtInBackgroundPath(id))), id);
+    }
+    assert.isNull(builtInBackgroundForFile('my-plane.png'));
   });
 });
 

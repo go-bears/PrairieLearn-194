@@ -5,12 +5,16 @@ import fs from 'fs-extra';
 import { z } from 'zod';
 
 import {
+  BUILT_IN_BACKGROUNDS,
+  type BuiltInBackgroundId,
   DEFAULT_DRAWING_QUESTION,
   type DrawingQuestion,
+  ELEMENT_DEFAULT_CANVAS,
   REFERENCE_FILE_NAME,
   type ReferenceDrawing,
   ReferenceDrawingSchema,
 } from './drawing-question.shared.js';
+import { APP_ROOT_PATH } from './paths.js';
 import { formatJsonWithPrettier } from './prettier.js';
 
 const DEFAULT_ANSWERS_NAME = 'drawing';
@@ -96,8 +100,8 @@ export function parseDrawingQuestionHtml(html: string, { autograde }: { autograd
     question: {
       prompt: (MARKDOWN_PROMPT.exec(html)?.[1] ?? panel.html() ?? '').trim(),
       canvas: {
-        width: number('width', defaults.canvas.width),
-        height: number('height', defaults.canvas.height),
+        width: number('width', ELEMENT_DEFAULT_CANVAS.width),
+        height: number('height', ELEMENT_DEFAULT_CANVAS.height),
       },
       backgroundImage: element.attr('background-image') ?? null,
       telemetry: flag('telemetry', false),
@@ -146,6 +150,11 @@ export async function readDrawingQuestion(questionPath: string): Promise<Drawing
       : null,
     hasUnmanagedContent: html.trim() !== '' && (parsed === null || parsed.hasOtherContent),
   };
+}
+
+export function builtInBackgroundPath(id: BuiltInBackgroundId): string {
+  const { fileName } = BUILT_IN_BACKGROUNDS[id];
+  return path.join(APP_ROOT_PATH, 'elements', 'pl-tablet-input', 'clientFilesElement', fileName);
 }
 
 export function sanitizeImageFileName(name: string): string {

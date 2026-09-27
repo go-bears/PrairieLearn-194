@@ -7,6 +7,7 @@ import { afterAll, assert, beforeAll, describe, test } from 'vitest';
 import { generatePrefixCsrfToken } from '@prairielearn/signed-token';
 
 import { config } from '../lib/config.js';
+import { builtInBackgroundPath } from '../lib/drawing-question.js';
 import { DEFAULT_DRAWING_QUESTION } from '../lib/drawing-question.shared.js';
 import { TEST_COURSE_PATH } from '../lib/paths.js';
 import { selectAssessmentByTid } from '../models/assessment.js';
@@ -34,8 +35,9 @@ const REFERENCE = {
   ],
 };
 const QUESTION = {
-  ...DEFAULT_DRAWING_QUESTION,
   prompt: 'Draw the line $y = x$.',
+  canvas: DEFAULT_DRAWING_QUESTION.canvas,
+  telemetry: true,
   grading: { ...DEFAULT_DRAWING_QUESTION.grading, mode: 'function' as const },
 };
 
@@ -77,7 +79,8 @@ describe('Drawing question builder', { concurrent: false }, () => {
       questionId,
       question: QUESTION,
       reference: REFERENCE,
-      image: {
+      background: {
+        kind: 'upload',
         name: 'my grid.png',
         type: 'image/png',
         contentBase64: Buffer.from('not really a png').toString('base64'),
@@ -119,16 +122,12 @@ describe('Drawing question builder', { concurrent: false }, () => {
     assert.equal(synced.grading_method, 'Internal');
   });
 
-  test('keeps the existing background image when no new image is uploaded', async () => {
+  test('keeps an existing custom background image', async () => {
     await createTrpcClient().drawingQuestions.save.mutate({
       questionId,
-      question: {
-        ...QUESTION,
-        backgroundImage: 'my_grid.png',
-        grading: { ...QUESTION.grading, autograde: false },
-      },
+      question: { ...QUESTION, grading: { ...QUESTION.grading, autograde: false } },
+      background: { kind: 'existing', fileName: 'my_grid.png' },
       reference: REFERENCE,
-      image: null,
       assessment: null,
     });
     const html = await fs.readFile(path.join(questionPath(), 'question.html'), 'utf8');
@@ -140,13 +139,29 @@ describe('Drawing question builder', { concurrent: false }, () => {
     );
   });
 
+  test('copies a built-in grid into the question', async () => {
+    await createTrpcClient().drawingQuestions.save.mutate({
+      questionId,
+      question: QUESTION,
+      background: { kind: 'builtIn', id: 'grid-axes' },
+      reference: REFERENCE,
+      assessment: null,
+    });
+    const html = await fs.readFile(path.join(questionPath(), 'question.html'), 'utf8');
+    assert.include(html, 'background-image="grid-axes.png"');
+    assert.deepEqual(
+      await fs.readFile(path.join(questionPath(), 'clientFilesQuestion', 'grid-axes.png')),
+      await fs.readFile(builtInBackgroundPath('grid-axes')),
+    );
+  });
+
   test('rejects autograding without a reference drawing', async () => {
     const error = await createTrpcClient()
       .drawingQuestions.save.mutate({
         questionId,
         question: QUESTION,
+        background: { kind: 'none' },
         reference: null,
-        image: null,
         assessment: null,
       })
       .catch((err: unknown) => err);
@@ -154,17 +169,20 @@ describe('Drawing question builder', { concurrent: false }, () => {
     assert.equal(error.data?.code, 'BAD_REQUEST');
   });
 
-  test('rejects a background image that does not exist', async () => {
-    const error = await createTrpcClient()
-      .drawingQuestions.save.mutate({
-        questionId,
-        question: { ...QUESTION, backgroundImage: 'missing.png' },
-        reference: REFERENCE,
-        image: null,
-        assessment: null,
-      })
-      .catch((err: unknown) => err);
-    assert.instanceOf(error, TRPCClientError);
-    assert.include(error.message, 'missing.png');
-  });
+  test.each(['missing.png', '../info.json'])(
+    'rejects an existing background image that is not in clientFilesQuestion: %s',
+    async (fileName) => {
+      const error = await createTrpcClient()
+        .drawingQuestions.save.mutate({
+          questionId,
+          question: QUESTION,
+          background: { kind: 'existing', fileName },
+          reference: REFERENCE,
+          assessment: null,
+        })
+        .catch((err: unknown) => err);
+      assert.instanceOf(error, TRPCClientError);
+      assert.include(error.message, fileName);
+    },
+  );
 });

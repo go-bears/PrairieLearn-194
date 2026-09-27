@@ -3,22 +3,21 @@ import clsx from 'clsx';
 import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
+import { run } from '@prairielearn/run';
 import { getAppError } from '@prairielearn/trpc/client';
 import { AppErrorAlert, QueryClientProviderDebug } from '@prairielearn/trpc/react';
 
 import {
-  BACKGROUND_IMAGE_TYPES,
-  type BackgroundImageType,
+  type BuiltInBackgroundId,
   type DrawingQuestion,
-  MAX_BACKGROUND_IMAGE_BYTES,
   type ReferenceDrawing,
-  canvasForImage,
-  isBackgroundImageType,
+  builtInBackgroundForFile,
 } from '../../../lib/drawing-question.shared.js';
 import { createCourseTrpcClient } from '../../../trpc/course/client.js';
 import { TRPCProvider, useTRPC } from '../../../trpc/course/context.js';
 import type { DrawingQuestionsError } from '../../../trpc/course/drawing-questions.js';
 
+import { type BackgroundChoice, BackgroundPicker } from './BackgroundPicker.js';
 import { ReferenceCanvas, type ReferenceCanvasHandle } from './ReferenceCanvas.js';
 
 export interface AssessmentOption {
@@ -34,6 +33,7 @@ interface EditorProps {
   initialReference: ReferenceDrawing | null;
   hasUnmanagedContent: boolean;
   assessments: AssessmentOption[];
+  builtInBackgroundUrls: Record<BuiltInBackgroundId, string>;
 }
 
 interface FormValues {
@@ -53,28 +53,7 @@ interface Surface {
   version: number;
   canvas: DrawingQuestion['canvas'];
   reference: ReferenceDrawing | null;
-  background: {
-    fileName: string;
-    url: string;
-    /** Present for a newly chosen image that has not been saved yet. */
-    upload: { name: string; type: BackgroundImageType; contentBase64: string } | null;
-  } | null;
-}
-
-function readAsBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.addEventListener('load', () => resolve(String(reader.result).split(',')[1]));
-    reader.addEventListener('error', () => reject(reader.error));
-    reader.readAsDataURL(file);
-  });
-}
-
-async function imageSize(url: string) {
-  const image = new Image();
-  image.src = url;
-  await image.decode();
-  return { width: image.naturalWidth, height: image.naturalHeight };
+  background: BackgroundChoice;
 }
 
 function FieldError({ id, message }: { id: string; message?: string }) {
@@ -92,27 +71,34 @@ function DrawingQuestionForm({
   initialReference,
   hasUnmanagedContent,
   assessments,
+  builtInBackgroundUrls,
 }: EditorProps) {
   const trpc = useTRPC();
   const saveMutation = useMutation(trpc.drawingQuestions.save.mutationOptions());
   const appError = getAppError<DrawingQuestionsError['Save']>(saveMutation.error);
   const canvasRef = useRef<ReferenceCanvasHandle>(null);
-  const [imageError, setImageError] = useState<string | null>(null);
   const [referenceError, setReferenceError] = useState<string | null>(null);
   const questionUrl = `${urlPrefix}/question/${questionId}`;
 
-  const [surface, setSurface] = useState<Surface>(() => ({
+  const initialBackground = run((): BackgroundChoice => {
+    const fileName = initialQuestion.backgroundImage;
+    const builtIn = builtInBackgroundForFile(fileName);
+    const background = builtIn
+      ? { kind: 'builtIn' as const, id: builtIn }
+      : fileName
+        ? { kind: 'existing' as const, fileName }
+        : { kind: 'none' as const };
+    const url = builtIn
+      ? builtInBackgroundUrls[builtIn]
+      : fileName && `${questionUrl}/clientFilesQuestion/${encodeURIComponent(fileName)}`;
+    return { background, url, canvas: initialQuestion.canvas };
+  });
+  const [surface, setSurface] = useState<Surface>({
     version: 0,
     canvas: initialQuestion.canvas,
     reference: initialReference,
-    background: initialQuestion.backgroundImage
-      ? {
-          fileName: initialQuestion.backgroundImage,
-          url: `${questionUrl}/clientFilesQuestion/${encodeURIComponent(initialQuestion.backgroundImage)}`,
-          upload: null,
-        }
-      : null,
-  }));
+    background: initialBackground,
+  });
 
   const { grading } = initialQuestion;
   const defaultValues: FormValues = {
@@ -135,35 +121,13 @@ function DrawingQuestionForm({
   const autograde = watch('autograde');
   const assessmentId = watch('assessmentId');
 
-  function updateSurface(changes: Pick<Surface, 'canvas' | 'background'>) {
+  function changeBackground(background: BackgroundChoice) {
     setSurface((current) => ({
       version: current.version + 1,
+      canvas: background.canvas ?? current.canvas,
       reference: canvasRef.current?.getReference() ?? current.reference,
-      ...changes,
+      background,
     }));
-  }
-
-  async function chooseImage(file: File | undefined) {
-    if (!file) return;
-    if (!isBackgroundImageType(file.type)) {
-      setImageError('Choose a PNG, JPEG, GIF, or WebP image.');
-      return;
-    }
-    if (file.size > MAX_BACKGROUND_IMAGE_BYTES) {
-      setImageError(`Choose an image smaller than ${MAX_BACKGROUND_IMAGE_BYTES / 1024 / 1024} MB.`);
-      return;
-    }
-    setImageError(null);
-    const url = URL.createObjectURL(file);
-    const [size, contentBase64] = await Promise.all([imageSize(url), readAsBase64(file)]);
-    updateSurface({
-      canvas: canvasForImage(size.width, size.height),
-      background: {
-        fileName: file.name,
-        url,
-        upload: { name: file.name, type: file.type, contentBase64 },
-      },
-    });
   }
 
   function onSubmit(values: FormValues) {
@@ -179,7 +143,6 @@ function DrawingQuestionForm({
         question: {
           prompt: values.prompt,
           canvas: surface.canvas,
-          backgroundImage: surface.background?.fileName ?? null,
           telemetry: values.telemetry,
           grading: {
             autograde: values.autograde,
@@ -189,8 +152,8 @@ function DrawingQuestionForm({
             partialCredit: values.partialCredit,
           },
         },
+        background: surface.background.background,
         reference,
-        image: surface.background?.upload ?? null,
         assessment: values.assessmentId
           ? { assessmentId: values.assessmentId, points: values.points }
           : null,
@@ -236,50 +199,23 @@ function DrawingQuestionForm({
       <section className="card">
         <h2 className="card-header h6">Canvas and answer key</h2>
         <div className="card-body d-flex flex-column gap-3">
-          <div>
-            <label className="form-label" htmlFor="background-image">
-              Background image
-            </label>
-            <div className="d-flex gap-2">
-              <input
-                id="background-image"
-                type="file"
-                className={clsx('form-control', imageError && 'is-invalid')}
-                accept={BACKGROUND_IMAGE_TYPES.join(',')}
-                aria-invalid={imageError ? true : undefined}
-                aria-errormessage={imageError ? 'background-image-error' : undefined}
-                onChange={(event) => chooseImage(event.target.files?.[0])}
-              />
-              {surface.background && (
-                <button
-                  type="button"
-                  className="btn btn-outline-secondary text-nowrap"
-                  onClick={() => updateSurface({ canvas: surface.canvas, background: null })}
-                >
-                  Remove image
-                </button>
-              )}
-            </div>
-            <FieldError id="background-image-error" message={imageError ?? undefined} />
-            <small className="form-text text-muted">
-              {surface.background
-                ? `Current image: ${surface.background.fileName}. `
-                : 'Optional, e.g. a coordinate grid. '}
-              The canvas takes the image's proportions ({surface.canvas.width} ×{' '}
-              {surface.canvas.height}).
-            </small>
-          </div>
+          <BackgroundPicker
+            initial={initialBackground}
+            builtInUrls={builtInBackgroundUrls}
+            onChange={changeBackground}
+          />
 
           <div>
             <p className="mb-2">
-              Draw the correct answer with your pen. Students see the background but not your
-              drawing; it is shown with the correct answer after grading.
+              Draw the correct answer with your pen on the {surface.canvas.width} ×{' '}
+              {surface.canvas.height} px canvas. Students see the background but not your drawing;
+              it is shown with the correct answer after grading.
             </p>
             <ReferenceCanvas
               key={surface.version}
               ref={canvasRef}
               canvas={surface.canvas}
-              backgroundUrl={surface.background?.url ?? null}
+              backgroundUrl={surface.background.url}
               initialReference={surface.reference}
             />
             <FieldError id="reference-error" message={referenceError ?? undefined} />

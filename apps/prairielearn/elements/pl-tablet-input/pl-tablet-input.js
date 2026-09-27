@@ -19,19 +19,46 @@
       context.stroke();
     }
 
+    function dot(point) {
+      context.beginPath();
+      context.arc(
+        point.x * width,
+        point.y * height,
+        Math.max(3, strokeWidth * 1.5),
+        0,
+        2 * Math.PI,
+      );
+      context.fillStyle = strokeColor;
+      context.fill();
+    }
+
+    /** A tap or click: every point within a couple of pixels of the first. */
+    function isDot(points) {
+      const [first] = points;
+      return points.every(
+        (point) =>
+          Math.abs(point.x - first.x) * width <= 2 && Math.abs(point.y - first.y) * height <= 2,
+      );
+    }
+
+    function stroke(points) {
+      if (points.length === 0) return;
+      if (isDot(points)) return dot(points[0]);
+      points.forEach((point, index) => segment(points[index - 1] ?? point, point));
+    }
+
     /** Redraws every stroke as it appeared at `time` ms into the response. */
     function strokes(list, time = Infinity) {
       context.clearRect(0, 0, width, height);
-      for (const stroke of list) {
-        if ((stroke.startedAt ?? 0) > time || (stroke.undone && (stroke.undoneAt ?? 0) <= time)) {
+      for (const item of list) {
+        if ((item.startedAt ?? 0) > time || (item.undone && (item.undoneAt ?? 0) <= time)) {
           continue;
         }
-        const points = stroke.points.filter((point) => (point.dt ?? 0) <= time);
-        points.forEach((point, index) => segment(points[index - 1] ?? point, point));
+        stroke(item.points.filter((point) => (point.dt ?? 0) <= time));
       }
     }
 
-    return { segment, strokes };
+    return { segment, stroke, strokes };
   }
 
   /** Records pointer strokes and their editing history, resuming from a saved answer. */
@@ -92,6 +119,7 @@
       } else {
         const endedAt = now();
         Object.assign(active, { endedAt, duration: endedAt - active.startedAt, cancelled });
+        renderer.stroke(active.points);
         log(cancelled ? 'stroke-cancel' : 'stroke-end', { at: endedAt, strokeIndex });
       }
       active = null;
@@ -111,7 +139,8 @@
     const listen = (type, handler) =>
       canvas.addEventListener(type, handler, { signal: options.signal });
     listen('pointerdown', (event) => {
-      if (active) return;
+      // Only the main mouse button draws; right-click keeps its context menu.
+      if (active || (event.pointerType === 'mouse' && event.button !== 0)) return;
       event.preventDefault();
       canvas.setPointerCapture(event.pointerId);
       activePointerId = event.pointerId;

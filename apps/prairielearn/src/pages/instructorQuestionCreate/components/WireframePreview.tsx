@@ -607,6 +607,31 @@ function ImageCapturePreview() {
   );
 }
 
+function DrawingPreview() {
+  return (
+    <div
+      style={{
+        height: 52,
+        border: `2px solid ${COLORS.shapeDark}`,
+        borderRadius: 6,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <svg width="64" height="36" viewBox="0 0 64 36" fill="none">
+        <path d="M4 18h56M32 4v28" stroke={COLORS.shape} strokeWidth="1.5" />
+        <path
+          d="M6 30C18 30 22 8 32 8s14 22 26 22"
+          stroke={COLORS.shapeDark}
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+      </svg>
+    </div>
+  );
+}
+
 /**
  * Keyed by full QID so each basic template question gets its own unique
  * preview, label, and description. Adding a new basic template question
@@ -694,6 +719,11 @@ const BASIC_QUESTION_MAP: Partial<
     label: 'Image capture',
     description: 'Take or upload a photo',
     Preview: ImageCapturePreview,
+  },
+  'template/tablet-input/drawing': {
+    label: 'Drawing',
+    description: 'Draw or graph with a pen or tablet',
+    Preview: DrawingPreview,
   },
 };
 

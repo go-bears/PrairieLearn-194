@@ -8,6 +8,7 @@ import { Hydrate } from '@prairielearn/react/server';
 import { PageLayout } from '../../components/PageLayout.js';
 import { extractPageContext } from '../../lib/client/page-context.js';
 import { getCourseFilesClient } from '../../lib/course-files-api.js';
+import { DRAWING_TEMPLATE_QID } from '../../lib/drawing-question.shared.js';
 import { typedAsyncHandler } from '../../lib/res-locals.js';
 import { validateShortName } from '../../lib/short-name.js';
 import { createAuthzMiddleware } from '../../middlewares/authzHelper.js';
@@ -130,7 +131,9 @@ router.post(
 
       flash('success', 'Question created successfully.');
 
-      if (usesTemplate) {
+      if (usesTemplate && req.body.template_qid === DRAWING_TEMPLATE_QID) {
+        res.redirect(`${res.locals.urlPrefix}/question/${result.question_id}/drawing`);
+      } else if (usesTemplate) {
         res.redirect(`${res.locals.urlPrefix}/question/${result.question_id}/preview`);
       } else {
         res.redirect(

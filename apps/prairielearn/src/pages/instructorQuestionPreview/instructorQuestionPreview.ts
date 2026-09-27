@@ -137,9 +137,22 @@ router.get(
       readmeHtml = markdownToHtml(readme, { allowHtml: false });
     }
 
+    const { authz_data, course, question } = res.locals;
+    const canEditDrawing =
+      authz_data.has_course_permission_edit &&
+      !course.example_course &&
+      question.course_id === course.id &&
+      question.type === 'Freeform' &&
+      (
+        await fs.readFile(path.join(path.dirname(questionReadmePath), 'question.html'), 'utf8')
+      ).includes('<pl-tablet-input');
+
     res.send(
       InstructorQuestionPreview({
         normalPreviewUrl,
+        drawingEditorUrl: canEditDrawing
+          ? `${res.locals.urlPrefix}/question/${question.id}/drawing`
+          : null,
         questionRenderContext,
         manualGradingPreviewUrl,
         aiGradingPreviewUrl,

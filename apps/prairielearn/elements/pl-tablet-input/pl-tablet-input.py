@@ -196,6 +196,12 @@ def grade(element_html: str, data: pl.QuestionData) -> None:
     pl.grade_answer_parameterized(data, s.name, grade_function, weight=s.weight)
 
 
+def _stroke_answer(x: float, y: float, half_width: float) -> dict[str, Any]:
+    """A single horizontal stroke centered on normalized (x, y)."""
+    points = [{"x": x - half_width, "y": y}, {"x": x + half_width, "y": y}]
+    return {"version": 1, "strokes": [{"points": points}]}
+
+
 def test(element_html: str, data: pl.ElementTestData) -> None:
     s = Settings.from_html(element_html)
     reference = data["correct_answers"].get(s.name)
@@ -205,17 +211,15 @@ def test(element_html: str, data: pl.ElementTestData) -> None:
         data["raw_submitted_answers"][s.name] = '{"version": 1}'
         data["format_errors"][s.name] = "invalid"
     elif reference is None:
-        # Nothing to grade against; server.py must generate test answers.
-        return
+        # Without a reference the element doesn't grade, so any drawing is a valid answer.
+        data["raw_submitted_answers"][s.name] = json.dumps(
+            _stroke_answer(0.5, 0.5, 0.1)
+        )
     elif test_type == "correct":
         data["raw_submitted_answers"][s.name] = json.dumps(reference)
         data["partial_scores"][s.name] = {"score": 1, "weight": s.weight}
     else:
         x, y = ink.emptiest_point(s.sample(reference), s.width, s.height)
-        dx = s.tolerance / (2 * s.width)
-        stray = {"points": [{"x": x - dx, "y": y}, {"x": x + dx, "y": y}]}
-        data["raw_submitted_answers"][s.name] = json.dumps({
-            "version": 1,
-            "strokes": [stray],
-        })
+        answer = _stroke_answer(x, y, s.tolerance / (2 * s.width))
+        data["raw_submitted_answers"][s.name] = json.dumps(answer)
         data["partial_scores"][s.name] = {"score": 0, "weight": s.weight}

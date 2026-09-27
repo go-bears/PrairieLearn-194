@@ -23,7 +23,8 @@
         { "id": "template/rich-text-editor/basic", "manualPoints": 1 },
         { "id": "template/file-editor/fixed", "manualPoints": 1 },
         { "id": "template/file-upload/fixed", "manualPoints": 1 },
-        { "id": "template/image-capture/static", "autoPoints": 1 }
+        { "id": "template/image-capture/static", "autoPoints": 1 },
+        { "id": "template/tablet-input/drawing", "manualPoints": 1 }
       ]
     },
     {

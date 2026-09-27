@@ -25,6 +25,18 @@ When a reference drawing is provided, the element autogrades the response by com
 
 Place the background image in `clientFilesQuestion/` and the reference drawing next to `question.html`. Set `"gradingMethod": "Internal"` in `info.json` to autograde, or `"Manual"` to grade by hand.
 
+## Drawing question builder
+
+Instead of writing these files by hand, create a question from the **Drawing** template on the **Create question** page, or click **Edit drawing question** on the preview of any question that uses `pl-tablet-input`. The builder lets you:
+
+- write the prompt in Markdown with LaTeX math,
+- upload a background image (the canvas takes the image's proportions),
+- draw the answer key with a pen, mouse, or touchscreen,
+- choose automatic or manual grading and the grading settings below, and
+- add the question to an assessment with a number of points.
+
+Saving writes `question.html`, `info.json`, `reference.json`, and the image in a single edit. The builder manages the whole `question.html`, so questions with additional elements or a `server.py` that sets answers should be edited as files instead.
+
 ## Customizations
 
 | Attribute          | Type                        | Default     | Description                                                                                 |
@@ -96,5 +108,7 @@ This element collects raw tablet input data. Before using it with real student r
 ## Example implementations
 
 - [element/tabletInput]
+- [template/tablet-input/drawing]
 
+[template/tablet-input/drawing]: https://github.com/PrairieLearn/PrairieLearn/tree/master/exampleCourse/questions/template/tablet-input/drawing
 [element/tabletInput]: https://github.com/PrairieLearn/PrairieLearn/tree/master/exampleCourse/questions/element/tabletInput

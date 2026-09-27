@@ -261,3 +261,40 @@ export function renameQidInAssessment(
   );
   return { assessment: updated, renamedCount: changedCount };
 }
+
+export type QuestionPoints = { autoPoints: number } | { manualPoints: number };
+
+const POINTS_KEYS = new Set(['points', 'maxPoints', 'autoPoints', 'maxAutoPoints', 'manualPoints']);
+
+function withPoints<T extends object>(block: T, points: QuestionPoints): T {
+  const rest = Object.fromEntries(Object.entries(block).filter(([key]) => !POINTS_KEYS.has(key)));
+  return { ...rest, ...points } as T;
+}
+
+/**
+ * Returns a copy of `assessment` in which every reference to `qid` awards
+ * exactly `points`, replacing any existing points settings. If the assessment
+ * doesn't reference `qid`, it is added in a new zone.
+ */
+export function setQuestionPoints(
+  assessment: AssessmentJsonInput,
+  qid: string,
+  points: QuestionPoints,
+): { assessment: AssessmentJsonInput; added: boolean } {
+  if (!collectAssessmentQids(assessment).has(qid)) {
+    const zones = [...(assessment.zones ?? []), { questions: [{ id: qid, ...points }] }];
+    return { assessment: { ...assessment, zones }, added: true };
+  }
+  const zones = (assessment.zones ?? []).map((zone) => ({
+    ...zone,
+    questions: zone.questions.map((block) => ({
+      ...(block.id === qid ? withPoints(block, points) : block),
+      ...(block.alternatives && {
+        alternatives: block.alternatives.map((alternative) =>
+          alternative.id === qid ? withPoints(alternative, points) : alternative,
+        ),
+      }),
+    })),
+  }));
+  return { assessment: { ...assessment, zones }, added: false };
+}

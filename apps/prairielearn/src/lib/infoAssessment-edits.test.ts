@@ -2,7 +2,7 @@ import { assert, describe, it } from 'vitest';
 
 import type { AssessmentJsonInput, ZoneAssessmentJsonInput } from '../schemas/infoAssessment.js';
 
-import { removeQidsFromAssessment } from './infoAssessment-edits.js';
+import { removeQidsFromAssessment, setQuestionPoints } from './infoAssessment-edits.js';
 
 function makeAssessment(zones: ZoneAssessmentJsonInput[]): AssessmentJsonInput {
   return {
@@ -153,5 +153,45 @@ describe('removeQidsFromAssessment', () => {
     );
     assert.isNotTrue(updated.zones?.[0].lockpoint);
     assert.equal(lockpointsMovedOrRemoved, 1);
+  });
+});
+
+describe('setQuestionPoints', () => {
+  it('replaces every points setting on an existing question', () => {
+    const assessment = makeAssessment([
+      {
+        questions: [
+          { id: 'q1', points: [3, 2, 1], maxPoints: 5 },
+          { id: 'q2', autoPoints: 1 },
+        ],
+      },
+    ]);
+    const { assessment: updated, added } = setQuestionPoints(assessment, 'q1', { manualPoints: 4 });
+    assert.isFalse(added);
+    assert.deepEqual(updated.zones?.[0].questions, [
+      { id: 'q1', manualPoints: 4 },
+      { id: 'q2', autoPoints: 1 },
+    ]);
+  });
+
+  it('updates the question inside an alternative group', () => {
+    const assessment = makeAssessment([
+      {
+        questions: [{ numberChoose: 1, alternatives: [{ id: 'q1' }, { id: 'q2', autoPoints: 1 }] }],
+      },
+    ]);
+    const { assessment: updated } = setQuestionPoints(assessment, 'q2', { autoPoints: 5 });
+    assert.deepEqual(updated.zones?.[0].questions[0].alternatives, [
+      { id: 'q1' },
+      { id: 'q2', autoPoints: 5 },
+    ]);
+  });
+
+  it('adds a missing question in a new zone without mutating the input', () => {
+    const assessment = makeAssessment([{ questions: [{ id: 'q1', autoPoints: 1 }] }]);
+    const { assessment: updated, added } = setQuestionPoints(assessment, 'q2', { autoPoints: 2 });
+    assert.isTrue(added);
+    assert.deepEqual(updated.zones?.[1], { questions: [{ id: 'q2', autoPoints: 2 }] });
+    assert.lengthOf(assessment.zones ?? [], 1);
   });
 });

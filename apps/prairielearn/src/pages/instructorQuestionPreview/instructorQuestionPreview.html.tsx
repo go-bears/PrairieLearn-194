@@ -22,6 +22,7 @@ export function InstructorQuestionPreview({
   aiGradingPreviewUrl,
   renderSubmissionSearchParams,
   readmeHtml,
+  drawingEditorUrl,
   questionCopyTargets,
   resLocals,
 }: {
@@ -31,6 +32,8 @@ export function InstructorQuestionPreview({
   aiGradingPreviewUrl?: string;
   renderSubmissionSearchParams: URLSearchParams;
   readmeHtml: string;
+  /** Link to the drawing question builder, for editors of `pl-tablet-input` questions. */
+  drawingEditorUrl: string | null;
   questionCopyTargets: CopyTarget[] | null;
   resLocals: ResLocalsForPage<'instructor-question'> & ResLocalsQuestionRender;
 }) {
@@ -116,6 +119,17 @@ export function InstructorQuestionPreview({
       }
       <div class="row">
         <div class="col-lg-9 col-sm-12">
+          ${
+            drawingEditorUrl
+              ? html`
+                  <div class="d-flex justify-content-end mb-3">
+                    <a class="btn btn-sm btn-outline-primary" href="${drawingEditorUrl}">
+                      <i class="bi bi-pencil" aria-hidden="true"></i> Edit drawing question
+                    </a>
+                  </div>
+                `
+              : ''
+          }
           ${
             readmeHtml
               ? html`

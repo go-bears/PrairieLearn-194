@@ -107,7 +107,10 @@
       onChange();
     }
 
-    canvas.addEventListener('pointerdown', (event) => {
+    // `options.signal` lets embedders (e.g. the drawing question builder) detach the recorder.
+    const listen = (type, handler) =>
+      canvas.addEventListener(type, handler, { signal: options.signal });
+    listen('pointerdown', (event) => {
       if (active) return;
       event.preventDefault();
       canvas.setPointerCapture(event.pointerId);
@@ -117,13 +120,13 @@
       extend(event);
       log('stroke-start', { at: active.startedAt, strokeIndex: strokes.length - 1 });
     });
-    canvas.addEventListener('pointermove', (event) => {
+    listen('pointermove', (event) => {
       if (!isActivePointer(event)) return;
       event.preventDefault();
       extend(event);
     });
-    canvas.addEventListener('pointerup', finish);
-    canvas.addEventListener('pointercancel', finish);
+    listen('pointerup', finish);
+    listen('pointercancel', finish);
     renderer.strokes(strokes);
 
     return {

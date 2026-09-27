@@ -213,3 +213,17 @@ def test_generated_test_answers_grade_as_expected(test_type: str) -> None:
         graded["partial_scores"]["ink"]["score"]
         == data["partial_scores"]["ink"]["score"]
     )
+
+
+@pytest.mark.parametrize("test_type", ["correct", "incorrect"])
+def test_generated_test_answers_without_reference_are_valid_and_ungraded(
+    test_type: str,
+) -> None:
+    data = make_question_data(test_type=test_type, raw_submitted_answers={})
+    pl_tablet_input.test(element(), data)
+    assert data["partial_scores"] == {}
+    parsed = make_question_data(
+        submitted_answers={"ink": data["raw_submitted_answers"]["ink"]}
+    )
+    pl_tablet_input.parse(element(), parsed)
+    assert parsed["format_errors"] == {}

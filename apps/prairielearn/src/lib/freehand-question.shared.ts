@@ -1,12 +1,12 @@
 import { z } from 'zod';
 
 /**
- * A drawing question is a `question.html` with a prompt and a single
+ * A freehand question is a `question.html` with a prompt and a single
  * `pl-tablet-input` element, plus an optional background image and reference
- * drawing. The drawing question builder edits it through this shape.
+ * drawing. The freehand question builder edits it through this shape.
  */
 
-export const DRAWING_TEMPLATE_QID = 'template/tablet-input/drawing';
+export const FREEHAND_TEMPLATE_QID = 'template/tablet-input/freehand';
 export const REFERENCE_FILE_NAME = 'reference.json';
 export const MAX_CANVAS_DIMENSION = 1600;
 /** Base64-encoded, this keeps the save request under the 5 MB JSON body limit. */
@@ -68,7 +68,7 @@ export type BackgroundInput = z.infer<typeof BackgroundInputSchema>;
 
 const CanvasDimensionSchema = z.number().int().positive().max(MAX_CANVAS_DIMENSION);
 
-const DrawingGradingSchema = z.object({
+const FreehandGradingSchema = z.object({
   autograde: z.boolean(),
   mode: z.enum(['overlap', 'function']),
   tolerance: z.number().positive().max(200),
@@ -76,15 +76,15 @@ const DrawingGradingSchema = z.object({
   partialCredit: z.boolean(),
 });
 
-export const DrawingQuestionSchema = z.object({
+export const FreehandQuestionSchema = z.object({
   prompt: z.string(),
   canvas: z.object({ width: CanvasDimensionSchema, height: CanvasDimensionSchema }),
   /** File name in `clientFilesQuestion/`. */
   backgroundImage: z.string().nullable(),
   telemetry: z.boolean(),
-  grading: DrawingGradingSchema,
+  grading: FreehandGradingSchema,
 });
-export type DrawingQuestion = z.infer<typeof DrawingQuestionSchema>;
+export type FreehandQuestion = z.infer<typeof FreehandQuestionSchema>;
 
 const UnitSchema = z.number().min(0).max(1);
 
@@ -101,7 +101,7 @@ export type ReferenceDrawing = z.infer<typeof ReferenceDrawingSchema>;
 export const ELEMENT_DEFAULT_CANVAS = { width: 800, height: 400 };
 
 /** Grading settings mirror the `pl-tablet-input` attribute defaults. */
-export const DEFAULT_DRAWING_QUESTION: DrawingQuestion = {
+export const DEFAULT_FREEHAND_QUESTION: FreehandQuestion = {
   prompt: '',
   canvas: BUILT_IN_BACKGROUNDS['grid-paper'].canvas,
   backgroundImage: BUILT_IN_BACKGROUNDS['grid-paper'].fileName,
@@ -116,7 +116,7 @@ export const DEFAULT_DRAWING_QUESTION: DrawingQuestion = {
 };
 
 /** Fits an image into the canvas size limit while keeping its aspect ratio. */
-export function canvasForImage(width: number, height: number): DrawingQuestion['canvas'] {
+export function canvasForImage(width: number, height: number): FreehandQuestion['canvas'] {
   const scale = Math.min(1, MAX_CANVAS_DIMENSION / Math.max(width, height));
   return {
     width: Math.max(1, Math.round(width * scale)),

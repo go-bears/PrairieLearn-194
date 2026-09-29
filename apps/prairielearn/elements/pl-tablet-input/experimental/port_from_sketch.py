@@ -420,7 +420,7 @@ def report(source: Path, outcomes: list[Outcome]) -> str:
     return (
         f"Ported from `{source.name}` by the experimental `pl-tablet-input/experimental/port_from_sketch.py`.\n"
         "Randomization (`server.py`) is not carried over. Answer keys are generated from `pl-sketch-solution`, "
-        "and can be redrawn in the drawing builder.\n\n"
+        "and can be redrawn in the freehand question builder.\n\n"
         f"| Canvas | Result | Notes |\n| --- | --- | --- |\n{rows}\n"
     )
 

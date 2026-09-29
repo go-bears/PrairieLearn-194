@@ -138,7 +138,7 @@ router.get(
     }
 
     const { authz_data, course, question } = res.locals;
-    const canEditDrawing =
+    const canEditFreehand =
       authz_data.has_course_permission_edit &&
       !course.example_course &&
       question.course_id === course.id &&
@@ -150,8 +150,8 @@ router.get(
     res.send(
       InstructorQuestionPreview({
         normalPreviewUrl,
-        drawingEditorUrl: canEditDrawing
-          ? `${res.locals.urlPrefix}/question/${question.id}/drawing`
+        freehandEditorUrl: canEditFreehand
+          ? `${res.locals.urlPrefix}/question/${question.id}/freehand`
           : null,
         questionRenderContext,
         manualGradingPreviewUrl,

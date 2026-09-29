@@ -11,12 +11,12 @@ import { coreElementAssetPath } from '../../lib/assets.js';
 import { extractPageContext } from '../../lib/client/page-context.js';
 import { getCourseTrpcUrl } from '../../lib/client/url.js';
 import { config } from '../../lib/config.js';
-import { readDrawingQuestion } from '../../lib/drawing-question.js';
+import { readFreehandQuestion } from '../../lib/freehand-question.js';
 import {
   BUILT_IN_BACKGROUNDS,
   BUILT_IN_BACKGROUND_IDS,
   type BuiltInBackgroundId,
-} from '../../lib/drawing-question.shared.js';
+} from '../../lib/freehand-question.shared.js';
 import { typedAsyncHandler } from '../../lib/res-locals.js';
 import { createAuthzMiddleware } from '../../middlewares/authzHelper.js';
 import {
@@ -27,8 +27,8 @@ import { selectCourseInstancesWithStaffAccess } from '../../models/course-instan
 
 import {
   type AssessmentOption,
-  DrawingQuestionEditor,
-} from './components/DrawingQuestionEditor.js';
+  FreehandQuestionEditor,
+} from './components/FreehandQuestionEditor.js';
 
 const router = Router();
 
@@ -52,7 +52,7 @@ router.get(
     }
 
     const [state, courseInstances, referencing] = await Promise.all([
-      readDrawingQuestion(path.join(course.path, 'questions', question.qid)),
+      readFreehandQuestion(path.join(course.path, 'questions', question.qid)),
       selectCourseInstancesWithStaffAccess({ course, authzData }),
       selectAssessmentsReferencingQuestions({ course_id: course.id, question_ids: [question.id] }),
     ]);
@@ -88,8 +88,8 @@ router.get(
     res.send(
       PageLayout({
         resLocals: res.locals,
-        pageTitle: 'Drawing question',
-        navContext: { type: 'instructor', page: 'question', subPage: 'drawing' },
+        pageTitle: 'Freehand question',
+        navContext: { type: 'instructor', page: 'question', subPage: 'freehand' },
         headContent: (
           <>
             <link
@@ -102,7 +102,7 @@ router.get(
         options: { pageNote: question.qid },
         content: (
           <Hydrate>
-            <DrawingQuestionEditor
+            <FreehandQuestionEditor
               trpcCsrfToken={trpcCsrfToken}
               courseId={course.id}
               questionId={question.id}

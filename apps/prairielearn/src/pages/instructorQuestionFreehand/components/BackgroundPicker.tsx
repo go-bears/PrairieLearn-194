@@ -7,14 +7,14 @@ import {
   BUILT_IN_BACKGROUND_IDS,
   type BackgroundInput,
   type BuiltInBackgroundId,
-  type DrawingQuestion,
+  type FreehandQuestion,
   MAX_BACKGROUND_IMAGE_BYTES,
   MAX_CANVAS_DIMENSION,
   canvasForImage,
   isBackgroundImageType,
-} from '../../../lib/drawing-question.shared.js';
+} from '../../../lib/freehand-question.shared.js';
 
-type Canvas = DrawingQuestion['canvas'];
+type Canvas = FreehandQuestion['canvas'];
 type CustomBackground = Extract<BackgroundInput, { kind: 'existing' | 'upload' }>;
 
 export interface BackgroundChoice {

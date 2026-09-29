@@ -7,8 +7,8 @@ import { afterAll, assert, beforeAll, describe, test } from 'vitest';
 import { generatePrefixCsrfToken } from '@prairielearn/signed-token';
 
 import { config } from '../lib/config.js';
-import { builtInBackgroundPath } from '../lib/drawing-question.js';
-import { DEFAULT_DRAWING_QUESTION } from '../lib/drawing-question.shared.js';
+import { builtInBackgroundPath } from '../lib/freehand-question.js';
+import { DEFAULT_FREEHAND_QUESTION } from '../lib/freehand-question.shared.js';
 import { TEST_COURSE_PATH } from '../lib/paths.js';
 import { selectAssessmentByTid } from '../models/assessment.js';
 import { selectQuestionByQid } from '../models/question.js';
@@ -36,9 +36,9 @@ const REFERENCE = {
 };
 const QUESTION = {
   prompt: 'Draw the line $y = x$.',
-  canvas: DEFAULT_DRAWING_QUESTION.canvas,
+  canvas: DEFAULT_FREEHAND_QUESTION.canvas,
   telemetry: true,
-  grading: { ...DEFAULT_DRAWING_QUESTION.grading, mode: 'function' as const },
+  grading: { ...DEFAULT_FREEHAND_QUESTION.grading, mode: 'function' as const },
 };
 
 function createTrpcClient() {
@@ -49,7 +49,7 @@ function createTrpcClient() {
   return createCourseTrpcClient({ csrfToken, courseId: '1', urlBase: siteUrl });
 }
 
-describe('Drawing question builder', { concurrent: false }, () => {
+describe('Freehand question builder', { concurrent: false }, () => {
   let courseRepo: CourseRepoFixture;
   let questionId: string;
   const questionPath = () => path.join(courseRepo.courseLiveDir, 'questions', QID);
@@ -64,7 +64,7 @@ describe('Drawing question builder', { concurrent: false }, () => {
   afterAll(helperServer.after);
 
   test('renders the builder for course editors', async () => {
-    const response = await fetch(`${siteUrl}/pl/course/1/question/${questionId}/drawing`);
+    const response = await fetch(`${siteUrl}/pl/course/1/question/${questionId}/freehand`);
     assert.equal(response.status, 200);
     assert.include(await response.text(), 'Reference drawing canvas');
   });
@@ -75,7 +75,7 @@ describe('Drawing question builder', { concurrent: false }, () => {
       tid: 'hw16-editorTest',
     });
 
-    await createTrpcClient().drawingQuestions.save.mutate({
+    await createTrpcClient().freehandQuestions.save.mutate({
       questionId,
       question: QUESTION,
       reference: REFERENCE,
@@ -123,7 +123,7 @@ describe('Drawing question builder', { concurrent: false }, () => {
   });
 
   test('keeps an existing custom background image', async () => {
-    await createTrpcClient().drawingQuestions.save.mutate({
+    await createTrpcClient().freehandQuestions.save.mutate({
       questionId,
       question: { ...QUESTION, grading: { ...QUESTION.grading, autograde: false } },
       background: { kind: 'existing', fileName: 'my_grid.png' },
@@ -140,7 +140,7 @@ describe('Drawing question builder', { concurrent: false }, () => {
   });
 
   test('copies a built-in grid into the question', async () => {
-    await createTrpcClient().drawingQuestions.save.mutate({
+    await createTrpcClient().freehandQuestions.save.mutate({
       questionId,
       question: QUESTION,
       background: { kind: 'builtIn', id: 'grid-axes' },
@@ -157,7 +157,7 @@ describe('Drawing question builder', { concurrent: false }, () => {
 
   test('rejects autograding without a reference drawing', async () => {
     const error = await createTrpcClient()
-      .drawingQuestions.save.mutate({
+      .freehandQuestions.save.mutate({
         questionId,
         question: QUESTION,
         background: { kind: 'none' },
@@ -173,7 +173,7 @@ describe('Drawing question builder', { concurrent: false }, () => {
     'rejects an existing background image that is not in clientFilesQuestion: %s',
     async (fileName) => {
       const error = await createTrpcClient()
-        .drawingQuestions.save.mutate({
+        .freehandQuestions.save.mutate({
           questionId,
           question: QUESTION,
           background: { kind: 'existing', fileName },

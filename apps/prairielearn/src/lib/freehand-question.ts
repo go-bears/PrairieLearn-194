@@ -7,13 +7,13 @@ import { z } from 'zod';
 import {
   BUILT_IN_BACKGROUNDS,
   type BuiltInBackgroundId,
-  DEFAULT_DRAWING_QUESTION,
-  type DrawingQuestion,
+  DEFAULT_FREEHAND_QUESTION,
   ELEMENT_DEFAULT_CANVAS,
+  type FreehandQuestion,
   REFERENCE_FILE_NAME,
   type ReferenceDrawing,
   ReferenceDrawingSchema,
-} from './drawing-question.shared.js';
+} from './freehand-question.shared.js';
 import { APP_ROOT_PATH } from './paths.js';
 import { formatJsonWithPrettier } from './prettier.js';
 
@@ -22,8 +22,8 @@ const TRUE_VALUES = new Set(['true', 't', '1', 'yes', 'y', 'on']);
 const MARKDOWN_PROMPT =
   /<pl-question-panel>\s*<markdown>([\s\S]*?)<\/markdown>\s*<\/pl-question-panel>/;
 
-interface DrawingQuestionState {
-  question: DrawingQuestion;
+interface FreehandQuestionState {
+  question: FreehandQuestion;
   answersName: string;
   reference: ReferenceDrawing | null;
   /** Whether `question.html` has content the builder would overwrite on save. */
@@ -33,12 +33,12 @@ interface DrawingQuestionState {
 const escapeAttribute = (value: string) =>
   value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
 
-export function renderDrawingQuestionHtml({
+export function renderFreehandQuestionHtml({
   question,
   answersName,
   hasReference,
 }: {
-  question: DrawingQuestion;
+  question: FreehandQuestion;
   answersName: string;
   hasReference: boolean;
 }): string {
@@ -76,7 +76,7 @@ export function renderDrawingQuestionHtml({
 }
 
 /** Reads builder settings back out of `question.html`; null if it has no single `pl-tablet-input`. */
-export function parseDrawingQuestionHtml(html: string, { autograde }: { autograde: boolean }) {
+export function parseFreehandQuestionHtml(html: string, { autograde }: { autograde: boolean }) {
   const $ = cheerio.load(html, null, false);
   const element = $('pl-tablet-input');
   if (element.length !== 1) return null;
@@ -89,7 +89,7 @@ export function parseDrawingQuestionHtml(html: string, { autograde }: { autograd
     const value = element.attr(name);
     return value === undefined ? fallback : TRUE_VALUES.has(value.trim().toLowerCase());
   };
-  const defaults = DEFAULT_DRAWING_QUESTION;
+  const defaults = DEFAULT_FREEHAND_QUESTION;
   const panel = $('pl-question-panel');
 
   return {
@@ -112,7 +112,7 @@ export function parseDrawingQuestionHtml(html: string, { autograde }: { autograd
         passThreshold: number('pass-threshold', defaults.grading.passThreshold),
         partialCredit: flag('partial-credit', defaults.grading.partialCredit),
       },
-    } satisfies DrawingQuestion,
+    } satisfies FreehandQuestion,
   };
 }
 
@@ -131,18 +131,18 @@ async function readReference(filePath: string): Promise<ReferenceDrawing | null>
   return strokes.length > 0 ? { version: 1, strokes } : null;
 }
 
-export async function readDrawingQuestion(questionPath: string): Promise<DrawingQuestionState> {
+export async function readFreehandQuestion(questionPath: string): Promise<FreehandQuestionState> {
   const [html, info] = await Promise.all([
     fs.readFile(path.join(questionPath, 'question.html'), 'utf8').catch(() => ''),
     fs.readJson(path.join(questionPath, 'info.json')),
   ]);
   const autograde = info.gradingMethod !== 'Manual';
-  const parsed = parseDrawingQuestionHtml(html, { autograde });
+  const parsed = parseFreehandQuestionHtml(html, { autograde });
 
   return {
     question: parsed?.question ?? {
-      ...DEFAULT_DRAWING_QUESTION,
-      grading: { ...DEFAULT_DRAWING_QUESTION.grading, autograde },
+      ...DEFAULT_FREEHAND_QUESTION,
+      grading: { ...DEFAULT_FREEHAND_QUESTION.grading, autograde },
     },
     answersName: parsed?.answersName ?? DEFAULT_ANSWERS_NAME,
     reference: parsed?.referenceFile
@@ -167,10 +167,10 @@ export function sanitizeImageFileName(name: string): string {
 }
 
 /**
- * The files that make up a drawing question, keyed by absolute path, ready for
+ * The files that make up a freehand question, keyed by absolute path, ready for
  * a `FileUploadEditor` (which skips files whose contents are unchanged).
  */
-export async function drawingQuestionFiles({
+export async function freehandQuestionFiles({
   questionPath,
   question,
   answersName,
@@ -178,7 +178,7 @@ export async function drawingQuestionFiles({
   image,
 }: {
   questionPath: string;
-  question: DrawingQuestion;
+  question: FreehandQuestion;
   answersName: string;
   reference: ReferenceDrawing | null;
   image: { fileName: string; contents: Buffer } | null;
@@ -189,7 +189,7 @@ export async function drawingQuestionFiles({
 
   const textFiles: Record<string, string> = {
     [infoPath]: await formatJsonWithPrettier(JSON.stringify(info)),
-    [path.join(questionPath, 'question.html')]: renderDrawingQuestionHtml({
+    [path.join(questionPath, 'question.html')]: renderFreehandQuestionHtml({
       question,
       answersName,
       hasReference: reference !== null,

@@ -1,5 +1,5 @@
 Ported from `sketch` by the experimental `pl-tablet-input/experimental/port_from_sketch.py`.
-Randomization (`server.py`) is not carried over. Answer keys are generated from `pl-sketch-solution`, and can be redrawn in the drawing builder.
+Randomization (`server.py`) is not carried over. Answer keys are generated from `pl-sketch-solution`, and can be redrawn in the freehand question builder.
 
 | Canvas              | Result                      | Notes                                                                                                          |
 | ------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------- |

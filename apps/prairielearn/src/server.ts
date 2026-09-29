@@ -1132,8 +1132,8 @@ export async function initExpress(): Promise<Express> {
     (await import('./pages/instructorQuestionSettings/instructorQuestionSettings.js')).default,
   );
   app.use(
-    '/pl/course_instance/:course_instance_id(\\d+)/instructor/question/:question_id(\\d+)/drawing',
-    (await import('./pages/instructorQuestionDrawing/instructorQuestionDrawing.js')).default,
+    '/pl/course_instance/:course_instance_id(\\d+)/instructor/question/:question_id(\\d+)/freehand',
+    (await import('./pages/instructorQuestionFreehand/instructorQuestionFreehand.js')).default,
   );
   app.use(
     '/pl/course_instance/:course_instance_id(\\d+)/instructor/question/:question_id(\\d+)/preview',
@@ -1655,8 +1655,8 @@ export async function initExpress(): Promise<Express> {
     (await import('./pages/instructorQuestionSettings/instructorQuestionSettings.js')).default,
   );
   app.use(
-    '/pl/course/:course_id(\\d+)/question/:question_id(\\d+)/drawing',
-    (await import('./pages/instructorQuestionDrawing/instructorQuestionDrawing.js')).default,
+    '/pl/course/:course_id(\\d+)/question/:question_id(\\d+)/freehand',
+    (await import('./pages/instructorQuestionFreehand/instructorQuestionFreehand.js')).default,
   );
   app.use(
     '/pl/course/:course_id(\\d+)/question/:question_id(\\d+)/preview',

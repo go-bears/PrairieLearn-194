@@ -8,20 +8,6 @@ import { z } from 'zod';
 import { throwAppError } from '@prairielearn/trpc/server';
 import { IdSchema } from '@prairielearn/zod';
 
-import {
-  builtInBackgroundPath,
-  drawingQuestionFiles,
-  readDrawingQuestion,
-  sanitizeImageFileName,
-} from '../../lib/drawing-question.js';
-import {
-  BUILT_IN_BACKGROUNDS,
-  type BackgroundInput,
-  BackgroundInputSchema,
-  DrawingQuestionSchema,
-  MAX_BACKGROUND_IMAGE_BYTES,
-  ReferenceDrawingSchema,
-} from '../../lib/drawing-question.shared.js';
 import { getAssessmentInfoJsonPath } from '../../lib/editorUtil.js';
 import {
   type Editor,
@@ -29,6 +15,20 @@ import {
   MultiEditor,
   prepareJsonFileEditor,
 } from '../../lib/editors.js';
+import {
+  builtInBackgroundPath,
+  freehandQuestionFiles,
+  readFreehandQuestion,
+  sanitizeImageFileName,
+} from '../../lib/freehand-question.js';
+import {
+  BUILT_IN_BACKGROUNDS,
+  type BackgroundInput,
+  BackgroundInputSchema,
+  FreehandQuestionSchema,
+  MAX_BACKGROUND_IMAGE_BYTES,
+  ReferenceDrawingSchema,
+} from '../../lib/freehand-question.shared.js';
 import { type QuestionPoints, setQuestionPoints } from '../../lib/infoAssessment-edits.js';
 import { selectOptionalAssessmentInCourse } from '../../models/assessment.js';
 import { selectLiveQuestionsByIdsAndCourseId } from '../../models/question.js';
@@ -41,7 +41,7 @@ import {
   t,
 } from './init.js';
 
-export interface DrawingQuestionsError {
+export interface FreehandQuestionsError {
   Save: { code: 'SYNC_JOB_FAILED'; jobSequenceId: string };
 }
 
@@ -121,7 +121,7 @@ const save = t.procedure
   .input(
     z.object({
       questionId: IdSchema,
-      question: DrawingQuestionSchema.omit({ backgroundImage: true }),
+      question: FreehandQuestionSchema.omit({ backgroundImage: true }),
       background: BackgroundInputSchema,
       reference: ReferenceDrawingSchema.nullable(),
       assessment: z
@@ -145,12 +145,12 @@ const save = t.procedure
       throw badRequest('Draw a reference answer to enable autograding.');
     }
 
-    const { answersName } = await readDrawingQuestion(questionPath);
+    const { answersName } = await readFreehandQuestion(questionPath);
     const editors: Editor[] = [
       new FileUploadEditor({
         locals: ctx.locals,
         container: { rootPath: questionPath, invalidRootPaths: [] },
-        files: await drawingQuestionFiles({
+        files: await freehandQuestionFiles({
           questionPath,
           question: { ...input.question, backgroundImage },
           answersName,
@@ -172,20 +172,20 @@ const save = t.procedure
     }
 
     const editor = new MultiEditor(
-      { locals: ctx.locals, description: `Edit drawing question ${question.qid}` },
+      { locals: ctx.locals, description: `Edit freehand question ${question.qid}` },
       editors,
     );
     const serverJob = await editor.prepareServerJob();
     try {
       await editor.executeWithServerJob(serverJob);
     } catch {
-      throwAppError<DrawingQuestionsError['Save']>({
+      throwAppError<FreehandQuestionsError['Save']>({
         code: 'SYNC_JOB_FAILED',
-        message: 'Failed to save the drawing question',
+        message: 'Failed to save the freehand question',
         jobSequenceId: serverJob.jobSequenceId,
       });
     }
     return { jobSequenceId: serverJob.jobSequenceId };
   });
 
-export const drawingQuestionsRouter = t.router({ save });
+export const freehandQuestionsRouter = t.router({ save });

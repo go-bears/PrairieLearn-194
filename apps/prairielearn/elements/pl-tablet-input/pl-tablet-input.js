@@ -135,7 +135,7 @@
       onChange();
     }
 
-    // `options.signal` lets embedders (e.g. the drawing question builder) detach the recorder.
+    // `options.signal` lets embedders (e.g. the freehand question builder) detach the recorder.
     const listen = (type, handler) =>
       canvas.addEventListener(type, handler, { signal: options.signal });
     listen('pointerdown', (event) => {

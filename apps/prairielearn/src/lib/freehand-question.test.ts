@@ -6,21 +6,21 @@ import { afterEach, assert, beforeEach, describe, it } from 'vitest';
 
 import {
   builtInBackgroundPath,
-  drawingQuestionFiles,
-  parseDrawingQuestionHtml,
-  readDrawingQuestion,
-  renderDrawingQuestionHtml,
+  freehandQuestionFiles,
+  parseFreehandQuestionHtml,
+  readFreehandQuestion,
+  renderFreehandQuestionHtml,
   sanitizeImageFileName,
-} from './drawing-question.js';
+} from './freehand-question.js';
 import {
   BUILT_IN_BACKGROUND_IDS,
-  DEFAULT_DRAWING_QUESTION,
-  type DrawingQuestion,
+  DEFAULT_FREEHAND_QUESTION,
   ELEMENT_DEFAULT_CANVAS,
+  type FreehandQuestion,
   builtInBackgroundForFile,
-} from './drawing-question.shared.js';
+} from './freehand-question.shared.js';
 
-const QUESTION: DrawingQuestion = {
+const QUESTION: FreehandQuestion = {
   prompt: 'Graph $y = 2x - 1$.\n\nUse the grid.',
   canvas: { width: 487, height: 442 },
   backgroundImage: 'plane.png',
@@ -36,14 +36,14 @@ const QUESTION: DrawingQuestion = {
 
 const REFERENCE = { version: 1 as const, strokes: [{ points: [{ x: 0.1, y: 0.2 }] }] };
 
-describe('renderDrawingQuestionHtml', () => {
-  it('round-trips through parseDrawingQuestionHtml', () => {
-    const html = renderDrawingQuestionHtml({
+describe('renderFreehandQuestionHtml', () => {
+  it('round-trips through parseFreehandQuestionHtml', () => {
+    const html = renderFreehandQuestionHtml({
       question: QUESTION,
       answersName: 'graph',
       hasReference: true,
     });
-    const parsed = parseDrawingQuestionHtml(html, { autograde: true });
+    const parsed = parseFreehandQuestionHtml(html, { autograde: true });
     assert.deepEqual(parsed, {
       answersName: 'graph',
       referenceFile: 'reference.json',
@@ -53,7 +53,7 @@ describe('renderDrawingQuestionHtml', () => {
   });
 
   it('omits grading attributes for manually graded questions', () => {
-    const html = renderDrawingQuestionHtml({
+    const html = renderFreehandQuestionHtml({
       question: {
         ...QUESTION,
         backgroundImage: null,
@@ -68,7 +68,7 @@ describe('renderDrawingQuestionHtml', () => {
   });
 
   it('escapes attribute values', () => {
-    const html = renderDrawingQuestionHtml({
+    const html = renderFreehandQuestionHtml({
       question: QUESTION,
       answersName: 'a"b',
       hasReference: false,
@@ -77,9 +77,9 @@ describe('renderDrawingQuestionHtml', () => {
   });
 });
 
-describe('parseDrawingQuestionHtml', () => {
+describe('parseFreehandQuestionHtml', () => {
   it('uses element defaults and falls back to the panel HTML as the prompt', () => {
-    const parsed = parseDrawingQuestionHtml(
+    const parsed = parseFreehandQuestionHtml(
       '<pl-question-panel><p>Draw a circle.</p></pl-question-panel>\n<pl-tablet-input answers-name="x"></pl-tablet-input>',
       { autograde: false },
     );
@@ -91,7 +91,7 @@ describe('parseDrawingQuestionHtml', () => {
   });
 
   it('flags content the builder does not manage', () => {
-    const parsed = parseDrawingQuestionHtml(
+    const parsed = parseFreehandQuestionHtml(
       '<pl-tablet-input answers-name="x"></pl-tablet-input><pl-number-input answers-name="y"></pl-number-input>',
       { autograde: true },
     );
@@ -100,7 +100,7 @@ describe('parseDrawingQuestionHtml', () => {
   });
 
   it('returns null without exactly one pl-tablet-input', () => {
-    assert.isNull(parseDrawingQuestionHtml('<p>Hello</p>', { autograde: true }));
+    assert.isNull(parseFreehandQuestionHtml('<p>Hello</p>', { autograde: true }));
   });
 });
 
@@ -125,7 +125,7 @@ describe('question files', () => {
   let questionPath: string;
 
   beforeEach(async () => {
-    questionPath = await fs.mkdtemp(path.join(os.tmpdir(), 'drawing-question-'));
+    questionPath = await fs.mkdtemp(path.join(os.tmpdir(), 'freehand-question-'));
     await fs.writeJson(path.join(questionPath, 'info.json'), { uuid: 'u', title: 'T', topic: 'X' });
   });
 
@@ -134,7 +134,7 @@ describe('question files', () => {
   });
 
   it('reads back what it writes', async () => {
-    const files = await drawingQuestionFiles({
+    const files = await freehandQuestionFiles({
       questionPath,
       question: QUESTION,
       answersName: 'graph',
@@ -145,7 +145,7 @@ describe('question files', () => {
       await fs.outputFile(filePath, contents);
     }
 
-    assert.deepEqual(await readDrawingQuestion(questionPath), {
+    assert.deepEqual(await readFreehandQuestion(questionPath), {
       question: QUESTION,
       answersName: 'graph',
       reference: REFERENCE,
@@ -173,13 +173,13 @@ describe('question files', () => {
         { points: [{ x: 0.1, y: 0.2, p: 0.3 }] },
       ],
     });
-    assert.deepEqual((await readDrawingQuestion(questionPath)).reference, REFERENCE);
+    assert.deepEqual((await readFreehandQuestion(questionPath)).reference, REFERENCE);
   });
 
   it('defaults a new question and flags existing unrelated content', async () => {
     await fs.writeFile(path.join(questionPath, 'question.html'), '<p>Old question</p>');
-    const state = await readDrawingQuestion(questionPath);
-    assert.deepEqual(state.question, DEFAULT_DRAWING_QUESTION);
+    const state = await readFreehandQuestion(questionPath);
+    assert.deepEqual(state.question, DEFAULT_FREEHAND_QUESTION);
     assert.isTrue(state.hasUnmanagedContent);
   });
 });

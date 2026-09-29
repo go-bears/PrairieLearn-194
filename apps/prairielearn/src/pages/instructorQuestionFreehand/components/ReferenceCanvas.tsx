@@ -1,6 +1,6 @@
 import { type Ref, useEffect, useImperativeHandle, useRef } from 'react';
 
-import type { DrawingQuestion, ReferenceDrawing } from '../../../lib/drawing-question.shared.js';
+import type { FreehandQuestion, ReferenceDrawing } from '../../../lib/freehand-question.shared.js';
 
 interface TabletRecorder {
   undo: () => void;
@@ -41,7 +41,7 @@ export function ReferenceCanvas({
   initialReference,
   ref,
 }: {
-  canvas: DrawingQuestion['canvas'];
+  canvas: FreehandQuestion['canvas'];
   backgroundUrl: string | null;
   initialReference: ReferenceDrawing | null;
   ref: Ref<ReferenceCanvasHandle>;

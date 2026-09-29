@@ -22,7 +22,7 @@ export function InstructorQuestionPreview({
   aiGradingPreviewUrl,
   renderSubmissionSearchParams,
   readmeHtml,
-  drawingEditorUrl,
+  freehandEditorUrl,
   questionCopyTargets,
   resLocals,
 }: {
@@ -32,8 +32,8 @@ export function InstructorQuestionPreview({
   aiGradingPreviewUrl?: string;
   renderSubmissionSearchParams: URLSearchParams;
   readmeHtml: string;
-  /** Link to the drawing question builder, for editors of `pl-tablet-input` questions. */
-  drawingEditorUrl: string | null;
+  /** Link to the freehand question builder, for editors of `pl-tablet-input` questions. */
+  freehandEditorUrl: string | null;
   questionCopyTargets: CopyTarget[] | null;
   resLocals: ResLocalsForPage<'instructor-question'> & ResLocalsQuestionRender;
 }) {
@@ -120,11 +120,11 @@ export function InstructorQuestionPreview({
       <div class="row">
         <div class="col-lg-9 col-sm-12">
           ${
-            drawingEditorUrl
+            freehandEditorUrl
               ? html`
                   <div class="d-flex justify-content-end mb-3">
-                    <a class="btn btn-sm btn-outline-primary" href="${drawingEditorUrl}">
-                      <i class="bi bi-pencil" aria-hidden="true"></i> Edit drawing question
+                    <a class="btn btn-sm btn-outline-primary" href="${freehandEditorUrl}">
+                      <i class="bi bi-pencil" aria-hidden="true"></i> Edit freehand question
                     </a>
                   </div>
                 `

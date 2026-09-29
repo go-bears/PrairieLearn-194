@@ -607,7 +607,7 @@ function ImageCapturePreview() {
   );
 }
 
-function DrawingPreview() {
+function FreehandPreview() {
   return (
     <div
       style={{
@@ -720,10 +720,10 @@ const BASIC_QUESTION_MAP: Partial<
     description: 'Take or upload a photo',
     Preview: ImageCapturePreview,
   },
-  'template/tablet-input/drawing': {
-    label: 'Drawing',
-    description: 'Draw or graph with a pen or tablet',
-    Preview: DrawingPreview,
+  'template/tablet-input/freehand': {
+    label: 'Freehand',
+    description: 'Draw, graph, or mark points by hand',
+    Preview: FreehandPreview,
   },
 };
 

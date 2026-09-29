@@ -9,13 +9,13 @@ import { AppErrorAlert, QueryClientProviderDebug } from '@prairielearn/trpc/reac
 
 import {
   type BuiltInBackgroundId,
-  type DrawingQuestion,
+  type FreehandQuestion,
   type ReferenceDrawing,
   builtInBackgroundForFile,
-} from '../../../lib/drawing-question.shared.js';
+} from '../../../lib/freehand-question.shared.js';
 import { createCourseTrpcClient } from '../../../trpc/course/client.js';
 import { TRPCProvider, useTRPC } from '../../../trpc/course/context.js';
-import type { DrawingQuestionsError } from '../../../trpc/course/drawing-questions.js';
+import type { FreehandQuestionsError } from '../../../trpc/course/freehand-questions.js';
 
 import { type BackgroundChoice, BackgroundPicker } from './BackgroundPicker.js';
 import { ReferenceCanvas, type ReferenceCanvasHandle } from './ReferenceCanvas.js';
@@ -29,7 +29,7 @@ export interface AssessmentOption {
 interface EditorProps {
   questionId: string;
   urlPrefix: string;
-  initialQuestion: DrawingQuestion;
+  initialQuestion: FreehandQuestion;
   initialReference: ReferenceDrawing | null;
   hasUnmanagedContent: boolean;
   assessments: AssessmentOption[];
@@ -40,7 +40,7 @@ interface FormValues {
   prompt: string;
   telemetry: boolean;
   autograde: boolean;
-  mode: DrawingQuestion['grading']['mode'];
+  mode: FreehandQuestion['grading']['mode'];
   tolerance: number;
   passPercent: number;
   partialCredit: boolean;
@@ -51,7 +51,7 @@ interface FormValues {
 /** Everything that requires remounting the reference canvas when it changes. */
 interface Surface {
   version: number;
-  canvas: DrawingQuestion['canvas'];
+  canvas: FreehandQuestion['canvas'];
   reference: ReferenceDrawing | null;
   background: BackgroundChoice;
 }
@@ -64,7 +64,7 @@ function FieldError({ id, message }: { id: string; message?: string }) {
   ) : null;
 }
 
-function DrawingQuestionForm({
+function FreehandQuestionForm({
   questionId,
   urlPrefix,
   initialQuestion,
@@ -74,8 +74,8 @@ function DrawingQuestionForm({
   builtInBackgroundUrls,
 }: EditorProps) {
   const trpc = useTRPC();
-  const saveMutation = useMutation(trpc.drawingQuestions.save.mutationOptions());
-  const appError = getAppError<DrawingQuestionsError['Save']>(saveMutation.error);
+  const saveMutation = useMutation(trpc.freehandQuestions.save.mutationOptions());
+  const appError = getAppError<FreehandQuestionsError['Save']>(saveMutation.error);
   const canvasRef = useRef<ReferenceCanvasHandle>(null);
   const [referenceError, setReferenceError] = useState<string | null>(null);
   const questionUrl = `${urlPrefix}/question/${questionId}`;
@@ -171,8 +171,8 @@ function DrawingQuestionForm({
     <form className="d-flex flex-column gap-3" onSubmit={handleSubmit(onSubmit)}>
       {hasUnmanagedContent && (
         <div className="alert alert-warning mb-0" role="alert">
-          This question's <code>question.html</code> contains content the drawing builder doesn't
-          manage. Saving replaces it with the prompt and canvas below.
+          This question's <code>question.html</code> contains content the freehand question builder
+          doesn't manage. Saving replaces it with the prompt and canvas below.
         </div>
       )}
 
@@ -396,7 +396,7 @@ function DrawingQuestionForm({
   );
 }
 
-export function DrawingQuestionEditor({
+export function FreehandQuestionEditor({
   trpcCsrfToken,
   courseId,
   ...props
@@ -409,10 +409,10 @@ export function DrawingQuestionEditor({
   return (
     <QueryClientProviderDebug client={queryClient}>
       <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
-        <DrawingQuestionForm {...props} />
+        <FreehandQuestionForm {...props} />
       </TRPCProvider>
     </QueryClientProviderDebug>
   );
 }
 
-DrawingQuestionEditor.displayName = 'DrawingQuestionEditor';
+FreehandQuestionEditor.displayName = 'FreehandQuestionEditor';

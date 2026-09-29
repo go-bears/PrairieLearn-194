@@ -189,6 +189,7 @@ def parse(element_html: str, data: pl.QuestionData) -> None:
         "summary": {
             **ink.summarize(answer, s.width, s.height),
             "telemetry": s.telemetry,
+            "background_image": s.background_image,
         },
     }
 

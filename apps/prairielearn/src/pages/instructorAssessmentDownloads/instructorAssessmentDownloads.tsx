@@ -866,6 +866,7 @@ router.get(
           ['Max points', 'max_points'],
           ['is_autograded', 'is_autograded'],
           ['Telemetry on', 'telemetry_on'],
+          ['Background image', 'background_image'],
           ['Coverage %', 'coverage_percent'],
           ['Accuracy %', 'accuracy_percent'],
           ['Overlapping points', 'overlapping_points'],

@@ -107,25 +107,26 @@ The `events` array records stroke lifecycle and editing actions. Undo and clear 
 
 The full recording above is saved as a separate file attached to the submission, named `<answers-name>-strokes.json`. Grading and replay read that file, so each submission can be reconstructed exactly. The submitted answer itself holds only a summary:
 
-| Field                     | Meaning                                                                   |
-| ------------------------- | ------------------------------------------------------------------------- |
-| `strokes_submitted`       | Strokes in the submitted drawing (after undo and clear).                  |
-| `undo_count`              | Times the student pressed undo.                                           |
-| `clear_count`             | Times the student cleared the canvas.                                     |
-| `cancelled_strokes`       | Strokes the browser cancelled, for example when a palm touched down.      |
-| `first_stroke_started_ms` | When the first stroke started, in milliseconds after the question opened. |
-| `last_stroke_ended_ms`    | When the last stroke ended.                                               |
-| `response_duration_ms`    | Time from opening the question to submitting.                             |
-| `start_stroke`            | First point of the submitted drawing, as `[x, y]` canvas pixels.          |
-| `end_stroke`              | Last point of the submitted drawing.                                      |
-| `telemetry`               | Whether pen telemetry was collected (`telemetry="true"`).                 |
+| Field                     | Meaning                                                                             |
+| ------------------------- | ----------------------------------------------------------------------------------- |
+| `strokes_submitted`       | Strokes in the submitted drawing (after undo and clear).                            |
+| `undo_count`              | Times the student pressed undo.                                                     |
+| `clear_count`             | Times the student cleared the canvas.                                               |
+| `cancelled_strokes`       | Strokes the browser cancelled, for example when a palm touched down.                |
+| `first_stroke_started_ms` | When the first stroke started, in milliseconds after the question opened.           |
+| `last_stroke_ended_ms`    | When the last stroke ended.                                                         |
+| `response_duration_ms`    | Time from opening the question to submitting.                                       |
+| `start_stroke`            | First point of the submitted drawing, as `[x, y]` canvas pixels.                    |
+| `end_stroke`              | Last point of the submitted drawing.                                                |
+| `telemetry`               | Whether pen telemetry was collected (`telemetry="true"`).                           |
+| `background_image`        | The `background-image` file, such as `grid-paper.png`, or empty for a blank canvas. |
 
 When the element autogrades, its feedback also records `coverage_percent`, `accuracy_percent`, and `overlapping_points` (sample points along the student's ink within `tolerance` of the reference).
 
 On an assessment's **Downloads** page:
 
 - `all_submissions.csv`, `final_submissions.csv`, and `best_submissions.csv` show the summary, without stroke points or telemetry.
-- `freehand_summary.csv` has one row per student, question, submission, and canvas, with the canvas score (0–100); the question's gradebook points and maximum points (automatic plus manual); whether the question is autograded (`is_autograded`: `TRUE` or `FALSE`); the grading details; and the summary fields.
+- `freehand_summary.csv` has one row per student, question, submission, and canvas, with the canvas score (0–100); the question's gradebook points and maximum points (automatic plus manual); whether the question is autograded (`is_autograded`: `TRUE` or `FALSE`); the background image file (`none` for a blank canvas); the grading details; and the summary fields.
 - `freehand_telemetry.json` contains every submission's complete recording, labelled with the student, question, and submission.
 - The submitted files downloads (`all_files.zip`, `final_files.zip`, `best_files.zip`) include each `<answers-name>-strokes.json`.
 

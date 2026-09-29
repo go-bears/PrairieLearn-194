@@ -55,6 +55,7 @@ describe('freehandSummaries', () => {
         start_stroke: '(162, 416)',
         end_stroke: '(350, 41)',
         telemetry: null,
+        background_image: null,
       },
     ]);
   });

@@ -21,8 +21,10 @@ const FreehandAnswerSchema = z.object({
     response_duration_ms: z.number().nullable(),
     start_stroke: PointSchema.nullable(),
     end_stroke: PointSchema.nullable(),
-    /** Absent in summaries stored before this was recorded. */
+    /** Absent in summaries stored before these were recorded. */
     telemetry: z.boolean().optional(),
+    /** File in clientFilesQuestion/, or null for a blank canvas. */
+    background_image: z.string().nullable().optional(),
   }),
 });
 
@@ -58,6 +60,8 @@ export interface FreehandSummary {
   start_stroke: string | null;
   end_stroke: string | null;
   telemetry: boolean | null;
+  /** The background's file name, "none" for a blank canvas, or null if not recorded. */
+  background_image: string | null;
 }
 
 const formatPoint = (point: [number, number] | null) =>
@@ -76,7 +80,8 @@ export function freehandSummaries(
     if (!answer.success) return [];
     const partialScore = PartialScoreSchema.safeParse(partialScores?.[name]).data;
     const grading = GradingDetailsSchema.safeParse(partialScore?.feedback).data;
-    const { start_stroke, end_stroke, telemetry, ...summary } = answer.data.summary;
+    const { start_stroke, end_stroke, telemetry, background_image, ...summary } =
+      answer.data.summary;
     return [
       {
         answers_name: name,
@@ -88,6 +93,7 @@ export function freehandSummaries(
         start_stroke: formatPoint(start_stroke),
         end_stroke: formatPoint(end_stroke),
         telemetry: telemetry ?? null,
+        background_image: background_image === undefined ? null : (background_image ?? 'none'),
       },
     ];
   });

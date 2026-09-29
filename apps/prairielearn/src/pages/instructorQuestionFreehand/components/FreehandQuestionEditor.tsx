@@ -204,6 +204,8 @@ function FreehandQuestionForm({
         <h2 className="card-header h6">Canvas and answer key</h2>
         <div className="card-body d-flex flex-column gap-3">
           <BackgroundPicker
+            questionId={questionId}
+            urlPrefix={urlPrefix}
             initial={initialBackground}
             builtInUrls={builtInBackgroundUrls}
             questionImages={questionImages}

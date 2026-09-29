@@ -11,6 +11,7 @@ import { IdSchema } from '@prairielearn/zod';
 import { getAssessmentInfoJsonPath } from '../../lib/editorUtil.js';
 import {
   type Editor,
+  FileDeleteEditor,
   FileUploadEditor,
   MultiEditor,
   prepareJsonFileEditor,
@@ -18,6 +19,7 @@ import {
 import {
   builtInBackgroundPath,
   freehandQuestionFiles,
+  listQuestionImages,
   readFreehandQuestion,
   sanitizeImageFileName,
 } from '../../lib/freehand-question.js';
@@ -43,6 +45,7 @@ import {
 
 export interface FreehandQuestionsError {
   Save: { code: 'SYNC_JOB_FAILED'; jobSequenceId: string };
+  DeleteImage: { code: 'SYNC_JOB_FAILED'; jobSequenceId: string };
 }
 
 const badRequest = (message: string) => new TRPCError({ code: 'BAD_REQUEST', message });
@@ -115,6 +118,33 @@ async function resolveBackground(
   }
 }
 
+/** A live question in this course, and its directory. */
+async function selectQuestionPath(ctx: TRPCContext, questionId: string) {
+  const question = (
+    await selectLiveQuestionsByIdsAndCourseId({
+      question_ids: [questionId],
+      course_id: ctx.course.id,
+    })
+  ).at(0);
+  if (!question?.qid) throw new TRPCError({ code: 'NOT_FOUND', message: 'Question not found' });
+  return { qid: question.qid, questionPath: path.join(ctx.course.path, 'questions', question.qid) };
+}
+
+/** Commits and syncs an edit, reporting a failed sync with a link to its job logs. */
+async function runEditor(editor: Editor, failureMessage: string) {
+  const serverJob = await editor.prepareServerJob();
+  try {
+    await editor.executeWithServerJob(serverJob);
+  } catch {
+    throwAppError<FreehandQuestionsError['Save'] | FreehandQuestionsError['DeleteImage']>({
+      code: 'SYNC_JOB_FAILED',
+      message: failureMessage,
+      jobSequenceId: serverJob.jobSequenceId,
+    });
+  }
+  return { jobSequenceId: serverJob.jobSequenceId };
+}
+
 const save = t.procedure
   .use(requireCoursePermissionEdit)
   .use(requireNotExampleCourse)
@@ -130,14 +160,7 @@ const save = t.procedure
     }),
   )
   .mutation(async ({ input, ctx }) => {
-    const question = (
-      await selectLiveQuestionsByIdsAndCourseId({
-        question_ids: [input.questionId],
-        course_id: ctx.course.id,
-      })
-    ).at(0);
-    if (!question?.qid) throw new TRPCError({ code: 'NOT_FOUND', message: 'Question not found' });
-    const questionPath = path.join(ctx.course.path, 'questions', question.qid);
+    const { qid, questionPath } = await selectQuestionPath(ctx, input.questionId);
     const { autograde } = input.question.grading;
 
     const { backgroundImage, image } = await resolveBackground(input.background, questionPath);
@@ -164,28 +187,46 @@ const save = t.procedure
       editors.push(
         await prepareAssessmentPointsEditor({
           ctx,
-          qid: question.qid,
+          qid,
           assessmentId,
           points: autograde ? { autoPoints: points } : { manualPoints: points },
         }),
       );
     }
 
-    const editor = new MultiEditor(
-      { locals: ctx.locals, description: `Edit freehand question ${question.qid}` },
-      editors,
+    return runEditor(
+      new MultiEditor(
+        { locals: ctx.locals, description: `Edit freehand question ${qid}` },
+        editors,
+      ),
+      'Failed to save the freehand question',
     );
-    const serverJob = await editor.prepareServerJob();
-    try {
-      await editor.executeWithServerJob(serverJob);
-    } catch {
-      throwAppError<FreehandQuestionsError['Save']>({
-        code: 'SYNC_JOB_FAILED',
-        message: 'Failed to save the freehand question',
-        jobSequenceId: serverJob.jobSequenceId,
-      });
-    }
-    return { jobSequenceId: serverJob.jobSequenceId };
   });
 
-export const freehandQuestionsRouter = t.router({ save });
+/** Deletes an unused background image from the question's `clientFilesQuestion/` folder. */
+const deleteImage = t.procedure
+  .use(requireCoursePermissionEdit)
+  .use(requireNotExampleCourse)
+  .input(z.object({ questionId: IdSchema, fileName: z.string().min(1) }))
+  .mutation(async ({ input, ctx }) => {
+    const { questionPath } = await selectQuestionPath(ctx, input.questionId);
+    const { fileName } = input;
+    if (!(await listQuestionImages(questionPath)).includes(fileName)) {
+      throw badRequest(`"${fileName}" is not an image in this question's files.`);
+    }
+    if ((await readFreehandQuestion(questionPath)).question.backgroundImage === fileName) {
+      throw badRequest(
+        `"${fileName}" is the question's saved background. Choose another background and save before removing it.`,
+      );
+    }
+    return runEditor(
+      new FileDeleteEditor({
+        locals: ctx.locals,
+        container: { rootPath: questionPath, invalidRootPaths: [] },
+        deletePath: path.join(questionPath, 'clientFilesQuestion', fileName),
+      }),
+      `Failed to delete ${fileName}`,
+    );
+  });
+
+export const freehandQuestionsRouter = t.router({ save, deleteImage });

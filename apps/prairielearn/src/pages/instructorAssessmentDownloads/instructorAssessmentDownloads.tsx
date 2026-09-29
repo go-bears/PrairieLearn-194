@@ -864,7 +864,7 @@ router.get(
           ['Score', 'score'],
           ['Gradebook points', 'points'],
           ['Max points', 'max_points'],
-          ['Autograded', 'autograded'],
+          ['is_autograded', 'is_autograded'],
           ['Telemetry on', 'telemetry_on'],
           ['Coverage %', 'coverage_percent'],
           ['Accuracy %', 'accuracy_percent'],
@@ -885,7 +885,7 @@ router.get(
             ...submissionDetails(row),
             ...summary,
             // `points` are the question's current gradebook points, auto plus manual.
-            autograded: row.grading_method === 'Manual' ? 'FALSE' : 'TRUE',
+            is_autograded: row.grading_method === 'Manual' ? 'FALSE' : 'TRUE',
             telemetry_on: summary.telemetry == null ? null : summary.telemetry ? 'TRUE' : 'FALSE',
           })),
         );

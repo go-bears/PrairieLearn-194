@@ -1,0 +1,40 @@
+<div class="pl-freehand" data-options="{{options_json}}">
+  {{#editable}}
+  <div class="pl-freehand-toolbar" role="toolbar" aria-label="Drawing tools">
+    <button type="button" class="btn btn-light border js-freehand-undo" aria-label="Undo last stroke" title="Undo last stroke">
+      <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+    </button>
+    <button type="button" class="btn btn-light border js-freehand-clear" aria-label="Clear drawing" title="Clear drawing">
+      <i class="bi bi-trash3" aria-hidden="true"></i>
+    </button>
+    {{#telemetry}}<span class="small text-muted">Pen data collected</span>{{/telemetry}}
+  </div>
+  {{/editable}}
+  {{#replay}}
+  <div class="pl-freehand-toolbar" role="toolbar" aria-label="Drawing replay">
+    <button type="button" class="btn btn-light border js-freehand-replay" aria-label="Play drawing replay" title="Play drawing replay">
+      <i class="bi bi-play-fill" aria-hidden="true"></i>
+    </button>
+    <input class="js-freehand-replay-time" type="range" min="0" max="0" value="0" step="1" aria-label="Replay time">
+    <output class="small text-muted js-freehand-replay-label" aria-live="polite">0 ms</output>
+  </div>
+  {{/replay}}
+  {{#reference}}<p class="small text-muted mb-1">Reference drawing</p>{{/reference}}
+  <div class="pl-freehand-surface">
+    {{#background_url}}<img class="pl-freehand-background pl-freehand-background-{{background_fit}}" src="{{background_url}}" alt="">{{/background_url}}
+    <canvas class="pl-freehand-canvas" width="{{width}}" height="{{height}}" tabindex="0" aria-label="Drawing canvas"></canvas>
+  </div>
+  {{#editable}}<input type="hidden" name="{{name}}" class="js-freehand-answer">{{/editable}}
+  {{#submission}}
+  <div class="mt-2">
+    {{#correct}}<span class="badge text-bg-success"><i class="fas fa-check" aria-hidden="true"></i> 100%</span>{{/correct}}
+    {{#partial}}<span class="badge text-bg-warning"><i class="far fa-circle" aria-hidden="true"></i> {{partial}}%</span>{{/partial}}
+    {{#incorrect}}<span class="badge text-bg-danger"><i class="fas fa-times" aria-hidden="true"></i> 0%</span>{{/incorrect}}
+    {{#feedback}}<span class="small ms-1">{{feedback}}</span>{{/feedback}}
+    {{#format_error}}<span class="badge text-bg-danger">Invalid</span> <span class="small">{{format_error}}</span>{{/format_error}}
+  </div>
+  {{/submission}}
+</div>
+<script>
+  window.PLFreehand?.init(document.currentScript.previousElementSibling);
+</script>

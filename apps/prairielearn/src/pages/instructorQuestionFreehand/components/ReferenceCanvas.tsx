@@ -8,8 +8,8 @@ interface TabletRecorder {
   serialize: () => { strokes: { undone?: boolean; points: { x: number; y: number }[] }[] };
 }
 
-/** The drawing API that `pl-tablet-input.js` exposes as `window.PLTabletInput`. */
-interface PLTabletInputApi {
+/** The drawing API that `pl-freehand.js` exposes as `window.PLFreehand`. */
+interface PLFreehandApi {
   createRenderer: (canvas: HTMLCanvasElement, options: object) => unknown;
   createRecorder: (
     canvas: HTMLCanvasElement,
@@ -21,7 +21,7 @@ interface PLTabletInputApi {
 
 declare global {
   interface Window {
-    PLTabletInput?: PLTabletInputApi;
+    PLFreehand?: PLFreehandApi;
   }
 }
 
@@ -31,7 +31,7 @@ export interface ReferenceCanvasHandle {
 
 /**
  * The instructor's reference drawing, recorded with the same code as the
- * `pl-tablet-input` element so it matches what students see. Remount (via
+ * `pl-freehand` element so it matches what students see. Remount (via
  * `key`) to change the canvas size; strokes are normalized, so they carry over
  * through `initialReference`.
  */
@@ -51,7 +51,7 @@ export function ReferenceCanvas({
 
   // Attach the element's pointer recorder to the canvas, detaching it on unmount.
   useEffect(() => {
-    const api = window.PLTabletInput;
+    const api = window.PLFreehand;
     if (!api || !canvasRef.current) return;
     const controller = new AbortController();
     const options = {
@@ -95,17 +95,17 @@ export function ReferenceCanvas({
           <i className="bi bi-trash3" aria-hidden="true" /> Clear
         </button>
       </div>
-      <div className="pl-tablet-input-surface" style={{ maxWidth: canvas.width }}>
+      <div className="pl-freehand-surface" style={{ maxWidth: canvas.width }}>
         {backgroundUrl && (
           <img
-            className="pl-tablet-input-background pl-tablet-input-background-fill"
+            className="pl-freehand-background pl-freehand-background-fill"
             src={backgroundUrl}
             alt=""
           />
         )}
         <canvas
           ref={canvasRef}
-          className="pl-tablet-input-canvas"
+          className="pl-freehand-canvas"
           width={canvas.width}
           height={canvas.height}
           aria-label="Reference drawing canvas"

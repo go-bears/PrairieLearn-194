@@ -74,9 +74,7 @@ router.get(
     const builtInBackgroundUrls = Object.fromEntries(
       BUILT_IN_BACKGROUND_IDS.map((id) => [
         id,
-        coreElementAssetPath(
-          `pl-tablet-input/clientFilesElement/${BUILT_IN_BACKGROUNDS[id].fileName}`,
-        ),
+        coreElementAssetPath(`pl-freehand/clientFilesElement/${BUILT_IN_BACKGROUNDS[id].fileName}`),
       ]),
     ) as Record<BuiltInBackgroundId, string>;
 
@@ -92,11 +90,8 @@ router.get(
         navContext: { type: 'instructor', page: 'question', subPage: 'freehand' },
         headContent: (
           <>
-            <link
-              rel="stylesheet"
-              href={coreElementAssetPath('pl-tablet-input/pl-tablet-input.css')}
-            />
-            <script src={coreElementAssetPath('pl-tablet-input/pl-tablet-input.js')} />
+            <link rel="stylesheet" href={coreElementAssetPath('pl-freehand/pl-freehand.css')} />
+            <script src={coreElementAssetPath('pl-freehand/pl-freehand.js')} />
           </>
         ),
         options: { pageNote: question.qid },

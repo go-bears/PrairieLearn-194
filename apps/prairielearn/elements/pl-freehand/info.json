@@ -1,0 +1,7 @@
+{
+  "controller": "pl-freehand.py",
+  "dependencies": {
+    "elementScripts": ["pl-freehand.js"],
+    "elementStyles": ["pl-freehand.css"]
+  }
+}

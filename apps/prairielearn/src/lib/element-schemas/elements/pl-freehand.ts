@@ -3,7 +3,7 @@ import * as z from 'zod/v4';
 import { booleanFormat, integerFormat, numberFormat } from '../helpers.js';
 import type { ElementSchemaModule } from '../types.js';
 
-const plTabletInputAttributesSchema = z
+const plFreehandAttributesSchema = z
   .object({
     'allow-blank': booleanFormat().optional(),
     'answers-name': z.string(),
@@ -25,6 +25,6 @@ const plTabletInputAttributesSchema = z
   .strict();
 
 export const element: ElementSchemaModule = {
-  tag: 'pl-tablet-input',
-  schema: z.toJSONSchema(plTabletInputAttributesSchema, { target: 'draft-04' }),
+  tag: 'pl-freehand',
+  schema: z.toJSONSchema(plFreehandAttributesSchema, { target: 'draft-04' }),
 };

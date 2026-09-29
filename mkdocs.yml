@@ -245,6 +245,7 @@ nav:
           - '<span class="muted">pl-</span>file-editor': 'elements/pl-file-editor.md'
           - '<span class="muted">pl-</span>file-preview': 'elements/pl-file-preview.md'
           - '<span class="muted">pl-</span>file-upload': 'elements/pl-file-upload.md'
+          - '<span class="muted">pl-</span>freehand': 'elements/pl-freehand.md'
           - '<span class="muted">pl-</span>graph': 'elements/pl-graph.md'
           - '<span class="muted">pl-</span>hidden-hints': 'elements/pl-hidden-hints.md'
           - '<span class="muted">pl-</span>hide-in-manual-grading': 'elements/pl-hide-in-manual-grading.md'

@@ -2,11 +2,11 @@ import { z } from 'zod';
 
 /**
  * A freehand question is a `question.html` with a prompt and a single
- * `pl-tablet-input` element, plus an optional background image and reference
+ * `pl-freehand` element, plus an optional background image and reference
  * drawing. The freehand question builder edits it through this shape.
  */
 
-export const FREEHAND_TEMPLATE_QID = 'template/tablet-input/freehand';
+export const FREEHAND_TEMPLATE_QID = 'template/freehand/basic';
 export const REFERENCE_FILE_NAME = 'reference.json';
 export const MAX_CANVAS_DIMENSION = 1600;
 /** Base64-encoded, this keeps the save request under the 5 MB JSON body limit. */
@@ -25,7 +25,7 @@ export function isBackgroundImageType(type: string): type is BackgroundImageType
   return backgroundImageTypes.has(type);
 }
 
-/** Grids shipped in `elements/pl-tablet-input/clientFilesElement/`, copied into a question when chosen. */
+/** Grids shipped in `elements/pl-freehand/clientFilesElement/`, copied into a question when chosen. */
 const BuiltInBackgroundIdSchema = z.enum(['grid-paper', 'grid-axes']);
 export type BuiltInBackgroundId = z.infer<typeof BuiltInBackgroundIdSchema>;
 export const BUILT_IN_BACKGROUND_IDS = BuiltInBackgroundIdSchema.options;
@@ -88,7 +88,7 @@ export type FreehandQuestion = z.infer<typeof FreehandQuestionSchema>;
 
 const UnitSchema = z.number().min(0).max(1);
 
-/** Visible strokes only, matching what `pl-tablet-input` loads from `reference-file`. */
+/** Visible strokes only, matching what `pl-freehand` loads from `reference-file`. */
 export const ReferenceDrawingSchema = z.object({
   version: z.literal(1),
   strokes: z.array(
@@ -97,10 +97,10 @@ export const ReferenceDrawingSchema = z.object({
 });
 export type ReferenceDrawing = z.infer<typeof ReferenceDrawingSchema>;
 
-/** The `pl-tablet-input` canvas size when `width` and `height` are omitted. */
+/** The `pl-freehand` canvas size when `width` and `height` are omitted. */
 export const ELEMENT_DEFAULT_CANVAS = { width: 800, height: 400 };
 
-/** Grading settings mirror the `pl-tablet-input` attribute defaults. */
+/** Grading settings mirror the `pl-freehand` attribute defaults. */
 export const DEFAULT_FREEHAND_QUESTION: FreehandQuestion = {
   prompt: '',
   canvas: BUILT_IN_BACKGROUNDS['grid-paper'].canvas,

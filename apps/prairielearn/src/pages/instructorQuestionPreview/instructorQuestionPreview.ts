@@ -145,7 +145,7 @@ router.get(
       question.type === 'Freeform' &&
       (
         await fs.readFile(path.join(path.dirname(questionReadmePath), 'question.html'), 'utf8')
-      ).includes('<pl-tablet-input');
+      ).includes('<pl-freehand');
 
     res.send(
       InstructorQuestionPreview({

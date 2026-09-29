@@ -1,6 +1,6 @@
-# `pl-tablet-input` element
+# `pl-freehand` element
 
-`pl-tablet-input` provides a canvas for handwritten or hand-drawn responses, optionally drawn over a background image such as a coordinate plane. It uses browser Pointer Events, so it supports a mouse, touch, Apple Pencil, Wacom tablets, and Surface Pen when the browser exposes those inputs.
+`pl-freehand` provides a canvas for handwritten or hand-drawn responses, optionally drawn over a background image such as a coordinate plane. It uses browser Pointer Events, so it supports a mouse, touch, Apple Pencil, Wacom tablets, and Surface Pen when the browser exposes those inputs.
 
 The answer is a versioned JSON object containing normalized stroke points. With `telemetry="true"`, points include elapsed time, pressure, tilt, and a coarse pointer type. No device identifier, browser fingerprint, IP address, or wall-clock timestamp is collected.
 
@@ -13,21 +13,21 @@ When a reference drawing is provided, the element autogrades the response by com
   <p>Graph the line $y = 2x - 1$.</p>
 </pl-question-panel>
 
-<pl-tablet-input
+<pl-freehand
   answers-name="graph"
   width="487"
   height="442"
   background-image="coord_plane.jpg"
   reference-file="reference.json"
   grading="function"
-></pl-tablet-input>
+></pl-freehand>
 ```
 
 Place the background image in `clientFilesQuestion/` and the reference drawing next to `question.html`. Set `"gradingMethod": "Internal"` in `info.json` to autograde, or `"Manual"` to grade by hand.
 
 ## Freehand question builder
 
-Instead of writing these files by hand, create a question from the **Freehand** template on the **Create question** page, or click **Edit freehand question** on the preview of any question that uses `pl-tablet-input`. The builder lets you:
+Instead of writing these files by hand, create a question from the **Freehand** template on the **Create question** page, or click **Edit freehand question** on the preview of any question that uses `pl-freehand`. The builder lets you:
 
 - write the prompt in Markdown with LaTeX math,
 - choose a background: grid paper (the default, 800 × 600 px with 20 px squares), a grid with axes (one square per unit, x from −20 to 20 and y from −15 to 15), your own image, or none. The canvas takes the background's proportions, up to 1600 px on the longer side, and the chosen image is copied into `clientFilesQuestion/`,
@@ -103,12 +103,12 @@ Coordinates are normalized to `[0, 1]`. `responseDuration`, `startedAt`, `endedA
 
 The `events` array records stroke lifecycle and editing actions. Undo and clear hide strokes from the canvas by marking them `undone` with an `undoneAt` time, but retain their points and timing in the submitted answer for analysis.
 
-This element collects raw tablet input data. Before using it with real student responses, establish appropriate consent, retention, access, and deletion policies for the course or study.
+This element collects raw pen and touch input data. Before using it with real student responses, establish appropriate consent, retention, access, and deletion policies for the course or study.
 
 ## Example implementations
 
-- [element/tabletInput]
-- [template/tablet-input/freehand]
+- [element/freehand]
+- [template/freehand/basic]
 
-[template/tablet-input/freehand]: https://github.com/PrairieLearn/PrairieLearn/tree/master/exampleCourse/questions/template/tablet-input/freehand
-[element/tabletInput]: https://github.com/PrairieLearn/PrairieLearn/tree/master/exampleCourse/questions/element/tabletInput
+[template/freehand/basic]: https://github.com/PrairieLearn/PrairieLearn/tree/master/exampleCourse/questions/template/freehand/basic
+[element/freehand]: https://github.com/PrairieLearn/PrairieLearn/tree/master/exampleCourse/questions/element/freehand

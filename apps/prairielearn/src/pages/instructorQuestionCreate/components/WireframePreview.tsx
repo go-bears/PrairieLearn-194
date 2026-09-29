@@ -720,7 +720,7 @@ const BASIC_QUESTION_MAP: Partial<
     description: 'Take or upload a photo',
     Preview: ImageCapturePreview,
   },
-  'template/tablet-input/freehand': {
+  'template/freehand/basic': {
     label: 'Freehand',
     description: 'Draw, graph, or mark points by hand',
     Preview: FreehandPreview,

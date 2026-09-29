@@ -5,11 +5,11 @@ from dataclasses import dataclass
 from typing import Any
 
 import chevron
+import freehand_ink as ink
 import lxml.html
 import prairielearn as pl
-import tablet_ink as ink
 
-SCHEMA_PATH = pathlib.Path(__file__).parent / "schemas" / "pl-tablet-input.json"
+SCHEMA_PATH = pathlib.Path(__file__).parent / "schemas" / "pl-freehand.json"
 REFERENCE_COLOR = "#198754"
 
 
@@ -86,7 +86,7 @@ def prepare(element_html: str, data: pl.QuestionData) -> None:
 def _require_file(directory: str, file_name: str) -> str:
     path = os.path.join(directory, file_name)
     if not os.path.isfile(path):
-        raise ValueError(f'pl-tablet-input could not find "{file_name}" in {directory}')
+        raise ValueError(f'pl-freehand could not find "{file_name}" in {directory}')
     return path
 
 
@@ -141,7 +141,7 @@ def render(element_html: str, data: pl.QuestionData) -> str:
         "format_error": data["format_errors"].get(s.name),
         **(dict([pl.determine_score_params(score)]) if score is not None else {}),
     }
-    with open("pl-tablet-input.mustache", encoding="utf-8") as file:
+    with open("pl-freehand.mustache", encoding="utf-8") as file:
         return chevron.render(file, params).strip()
 
 
@@ -159,21 +159,21 @@ def parse_answer(raw: Any, s: Settings) -> dict[str, Any]:
     try:
         answer = json.loads(raw) if isinstance(raw, str) and raw else raw
     except json.JSONDecodeError as exc:
-        raise ValueError("The tablet input response is not valid JSON.") from exc
+        raise ValueError("The drawing is not valid JSON.") from exc
     answer: Any = answer or {"version": 1, "strokes": []}
     if (
         not isinstance(answer, dict)
         or answer.get("version") != 1
         or not isinstance(answer.get("strokes"), list)
     ):
-        raise ValueError("The tablet input response has an unsupported format.")
+        raise ValueError("The drawing has an unsupported format.")
     point_count = sum(
         len(stroke["points"])
         for stroke in answer["strokes"]
         if isinstance(stroke, dict) and isinstance(stroke.get("points"), list)
     )
     if point_count > s.max_points:
-        raise ValueError("The tablet input response contains too many points.")
+        raise ValueError("The drawing contains too many points.")
     if not ink.polylines(answer, 1, 1) and not s.allow_blank:
         raise ValueError("Draw your answer on the canvas before submitting.")
     return answer

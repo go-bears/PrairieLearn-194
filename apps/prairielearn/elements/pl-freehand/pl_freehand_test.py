@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-pl_tablet_input = importlib.import_module("pl-tablet-input")
+pl_freehand = importlib.import_module("pl-freehand")
 
 DIAGONAL: dict[str, Any] = {
     "version": 1,
@@ -17,7 +17,7 @@ def element(**attribs: str) -> str:
     extra = "".join(
         f' {key.replace("_", "-")}="{value}"' for key, value in attribs.items()
     )
-    return f'<pl-tablet-input answers-name="ink"{extra}></pl-tablet-input>'
+    return f'<pl-freehand answers-name="ink"{extra}></pl-freehand>'
 
 
 def make_question_data(
@@ -38,7 +38,7 @@ def make_question_data(
 
 
 def test_prepare_accepts_defaults() -> None:
-    pl_tablet_input.prepare(element(), make_question_data())
+    pl_freehand.prepare(element(), make_question_data())
 
 
 @pytest.mark.parametrize(
@@ -47,7 +47,7 @@ def test_prepare_accepts_defaults() -> None:
 )
 def test_prepare_rejects_non_positive_dimensions(attribs: dict[str, str]) -> None:
     with pytest.raises(ValueError, match="positive"):
-        pl_tablet_input.prepare(element(**attribs), make_question_data())
+        pl_freehand.prepare(element(**attribs), make_question_data())
 
 
 @pytest.mark.parametrize(
@@ -56,19 +56,19 @@ def test_prepare_rejects_non_positive_dimensions(attribs: dict[str, str]) -> Non
 )
 def test_prepare_rejects_invalid_grading_settings(attribs: dict[str, str]) -> None:
     with pytest.raises(ValueError, match="tolerance"):
-        pl_tablet_input.prepare(element(**attribs), make_question_data())
+        pl_freehand.prepare(element(**attribs), make_question_data())
 
 
 def test_prepare_rejects_duplicate_answer_name() -> None:
     data = make_question_data()
-    pl_tablet_input.prepare(element(), data)
+    pl_freehand.prepare(element(), data)
     with pytest.raises(KeyError, match="Duplicate"):
-        pl_tablet_input.prepare(element(), data)
+        pl_freehand.prepare(element(), data)
 
 
 def test_prepare_requires_background_image_file(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match=r"plane\.png"):
-        pl_tablet_input.prepare(
+        pl_freehand.prepare(
             element(background_image="plane.png"), make_question_data(tmp_path)
         )
 
@@ -81,27 +81,27 @@ def test_prepare_loads_compacted_reference(tmp_path: Path) -> None:
     })
     (tmp_path / "reference.json").write_text(json.dumps(reference))
     data = make_question_data(tmp_path)
-    pl_tablet_input.prepare(element(reference_file="reference.json"), data)
+    pl_freehand.prepare(element(reference_file="reference.json"), data)
     assert data["correct_answers"]["ink"] == DIAGONAL
 
 
 def test_prepare_keeps_reference_set_by_server(tmp_path: Path) -> None:
     data = make_question_data(tmp_path, correct_answers={"ink": DIAGONAL})
-    pl_tablet_input.prepare(element(reference_file="missing.json"), data)
+    pl_freehand.prepare(element(reference_file="missing.json"), data)
     assert data["correct_answers"]["ink"] == DIAGONAL
 
 
 def test_prepare_rejects_empty_reference(tmp_path: Path) -> None:
     (tmp_path / "reference.json").write_text('{"version": 1, "strokes": []}')
     with pytest.raises(ValueError, match="no visible strokes"):
-        pl_tablet_input.prepare(
+        pl_freehand.prepare(
             element(reference_file="reference.json"), make_question_data(tmp_path)
         )
 
 
 def parse(raw: Any, **attribs: str) -> dict[str, Any]:
     data = make_question_data(submitted_answers={"ink": raw})
-    pl_tablet_input.parse(element(**attribs), data)
+    pl_freehand.parse(element(**attribs), data)
     return data
 
 
@@ -157,7 +157,7 @@ def grade(answer: dict[str, Any], **attribs: str) -> dict[str, Any]:
     data = make_question_data(
         correct_answers={"ink": DIAGONAL}, submitted_answers={"ink": answer}
     )
-    pl_tablet_input.grade(element(**attribs), data)
+    pl_freehand.grade(element(**attribs), data)
     return data["partial_scores"]["ink"]
 
 
@@ -190,7 +190,7 @@ def test_grade_function_mode_rejects_wrong_slope() -> None:
 
 def test_grade_skips_questions_without_reference() -> None:
     data = make_question_data(submitted_answers={"ink": DIAGONAL})
-    pl_tablet_input.grade(element(), data)
+    pl_freehand.grade(element(), data)
     assert data["partial_scores"] == {}
 
 
@@ -199,16 +199,16 @@ def test_generated_test_answers_grade_as_expected(test_type: str) -> None:
     data = make_question_data(
         correct_answers={"ink": DIAGONAL}, test_type=test_type, raw_submitted_answers={}
     )
-    pl_tablet_input.test(element(), data)
+    pl_freehand.test(element(), data)
     graded = make_question_data(
         correct_answers={"ink": DIAGONAL},
         submitted_answers={"ink": data["raw_submitted_answers"]["ink"]},
     )
-    pl_tablet_input.parse(element(), graded)
+    pl_freehand.parse(element(), graded)
     if test_type == "invalid":
         assert "ink" in graded["format_errors"]
         return
-    pl_tablet_input.grade(element(), graded)
+    pl_freehand.grade(element(), graded)
     assert (
         graded["partial_scores"]["ink"]["score"]
         == data["partial_scores"]["ink"]["score"]
@@ -220,10 +220,10 @@ def test_generated_test_answers_without_reference_are_valid_and_ungraded(
     test_type: str,
 ) -> None:
     data = make_question_data(test_type=test_type, raw_submitted_answers={})
-    pl_tablet_input.test(element(), data)
+    pl_freehand.test(element(), data)
     assert data["partial_scores"] == {}
     parsed = make_question_data(
         submitted_answers={"ink": data["raw_submitted_answers"]["ink"]}
     )
-    pl_tablet_input.parse(element(), parsed)
+    pl_freehand.parse(element(), parsed)
     assert parsed["format_errors"] == {}

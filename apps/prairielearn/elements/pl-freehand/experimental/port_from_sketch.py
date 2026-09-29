@@ -1,12 +1,12 @@
-"""Experimental: port pl-sketch canvases in a question to pl-tablet-input.
+"""Experimental: port pl-sketch canvases in a question to pl-freehand.
 
 Writes a new question and leaves the source untouched. Each portable
-`<pl-sketch>` becomes a `<pl-tablet-input>` with:
+`<pl-sketch>` becomes a `<pl-freehand>` with:
 
 - an SVG background of the same axes, grid, and fixed drawings, and
 - a reference drawing generated from its `<pl-sketch-solution>` tags,
 
-using only existing pl-tablet-input attributes. Canvases that can't be ported
+using only existing pl-freehand attributes. Canvases that can't be ported
 faithfully stay as `<pl-sketch>`, and README.md explains why. Randomization
 (`server.py`, `{{params}}`) is not carried over.
 
@@ -268,7 +268,7 @@ class Sketch:
             ),
         }
         lines = "\n".join(f'  {key}="{value}"' for key, value in attributes.items())
-        return f"<pl-tablet-input\n{lines}\n></pl-tablet-input>"
+        return f"<pl-freehand\n{lines}\n></pl-freehand>"
 
 
 def _grid_steps(span: float, pixels: float, min_pixels: float) -> tuple[float, float]:
@@ -400,7 +400,7 @@ def port_question(
         (destination / name).write_text(contents, encoding="utf-8")
     ported_info = {
         "uuid": str(uuid.uuid4()),
-        "title": title or f"{info['title']} (ported to pl-tablet-input)",
+        "title": title or f"{info['title']} (ported to pl-freehand)",
         "topic": info.get("topic", "Default"),
         "type": "v3",
         "gradingMethod": "Internal",
@@ -414,11 +414,11 @@ def port_question(
 
 def report(source: Path, outcomes: list[Outcome]) -> str:
     rows = "\n".join(
-        f"| `{o.name}` | {'ported to `pl-tablet-input`' if o.ported else 'kept as `pl-sketch`'} | {'; '.join(o.notes)} |"
+        f"| `{o.name}` | {'ported to `pl-freehand`' if o.ported else 'kept as `pl-sketch`'} | {'; '.join(o.notes)} |"
         for o in outcomes
     )
     return (
-        f"Ported from `{source.name}` by the experimental `pl-tablet-input/experimental/port_from_sketch.py`.\n"
+        f"Ported from `{source.name}` by the experimental `pl-freehand/experimental/port_from_sketch.py`.\n"
         "Randomization (`server.py`) is not carried over. Answer keys are generated from `pl-sketch-solution`, "
         "and can be redrawn in the freehand question builder.\n\n"
         f"| Canvas | Result | Notes |\n| --- | --- | --- |\n{rows}\n"

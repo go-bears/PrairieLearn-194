@@ -66,19 +66,19 @@ export function renderFreehandQuestionHtml({
     '  </markdown>',
     '</pl-question-panel>',
     '',
-    '<pl-tablet-input',
+    '<pl-freehand',
     ...Object.entries(attributes)
       .filter(([, value]) => value !== null)
       .map(([name, value]) => `  ${name}="${escapeAttribute(String(value))}"`),
-    '></pl-tablet-input>',
+    '></pl-freehand>',
     '',
   ].join('\n');
 }
 
-/** Reads builder settings back out of `question.html`; null if it has no single `pl-tablet-input`. */
+/** Reads builder settings back out of `question.html`; null if it has no single `pl-freehand`. */
 export function parseFreehandQuestionHtml(html: string, { autograde }: { autograde: boolean }) {
   const $ = cheerio.load(html, null, false);
-  const element = $('pl-tablet-input');
+  const element = $('pl-freehand');
   if (element.length !== 1) return null;
 
   const number = (name: string, fallback: number) => {
@@ -96,7 +96,7 @@ export function parseFreehandQuestionHtml(html: string, { autograde }: { autogra
     answersName: element.attr('answers-name') ?? DEFAULT_ANSWERS_NAME,
     referenceFile: element.attr('reference-file') ?? null,
     hasOtherContent:
-      panel.length > 1 || $.root().children().not('pl-question-panel, pl-tablet-input').length > 0,
+      panel.length > 1 || $.root().children().not('pl-question-panel, pl-freehand').length > 0,
     question: {
       prompt: (MARKDOWN_PROMPT.exec(html)?.[1] ?? panel.html() ?? '').trim(),
       canvas: {
@@ -116,7 +116,7 @@ export function parseFreehandQuestionHtml(html: string, { autograde }: { autogra
   };
 }
 
-/** A reference file may be a raw `pl-tablet-input` answer that still holds undone strokes. */
+/** A reference file may be a raw `pl-freehand` answer that still holds undone strokes. */
 const StoredReferenceSchema = z.object({
   strokes: z.array(
     ReferenceDrawingSchema.shape.strokes.element.extend({ undone: z.boolean().optional() }),
@@ -154,7 +154,7 @@ export async function readFreehandQuestion(questionPath: string): Promise<Freeha
 
 export function builtInBackgroundPath(id: BuiltInBackgroundId): string {
   const { fileName } = BUILT_IN_BACKGROUNDS[id];
-  return path.join(APP_ROOT_PATH, 'elements', 'pl-tablet-input', 'clientFilesElement', fileName);
+  return path.join(APP_ROOT_PATH, 'elements', 'pl-freehand', 'clientFilesElement', fileName);
 }
 
 export function sanitizeImageFileName(name: string): string {

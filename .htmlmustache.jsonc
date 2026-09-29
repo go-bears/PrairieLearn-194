@@ -180,6 +180,10 @@
       ]
     },
     {
+      "name": "pl-freehand",
+      "schema": "./apps/prairielearn/elements/pl-freehand/schemas/pl-freehand.json"
+    },
+    {
       "name": "pl-integer-input",
       "schema": "./apps/prairielearn/elements/pl-integer-input/schemas/pl-integer-input.json"
     },
@@ -224,10 +228,6 @@
     {
       "name": "pl-symbolic-input",
       "schema": "./apps/prairielearn/elements/pl-symbolic-input/schemas/pl-symbolic-input.json"
-    },
-    {
-      "name": "pl-tablet-input",
-      "schema": "./apps/prairielearn/elements/pl-tablet-input/schemas/pl-tablet-input.json"
     },
     {
       "name": "pl-code",

@@ -80,7 +80,7 @@ describe('renderFreehandQuestionHtml', () => {
 describe('parseFreehandQuestionHtml', () => {
   it('uses element defaults and falls back to the panel HTML as the prompt', () => {
     const parsed = parseFreehandQuestionHtml(
-      '<pl-question-panel><p>Draw a circle.</p></pl-question-panel>\n<pl-tablet-input answers-name="x"></pl-tablet-input>',
+      '<pl-question-panel><p>Draw a circle.</p></pl-question-panel>\n<pl-freehand answers-name="x"></pl-freehand>',
       { autograde: false },
     );
     assert.isNotNull(parsed);
@@ -92,20 +92,20 @@ describe('parseFreehandQuestionHtml', () => {
 
   it('flags content the builder does not manage', () => {
     const parsed = parseFreehandQuestionHtml(
-      '<pl-tablet-input answers-name="x"></pl-tablet-input><pl-number-input answers-name="y"></pl-number-input>',
+      '<pl-freehand answers-name="x"></pl-freehand><pl-number-input answers-name="y"></pl-number-input>',
       { autograde: true },
     );
     assert.isNotNull(parsed);
     assert.isTrue(parsed.hasOtherContent);
   });
 
-  it('returns null without exactly one pl-tablet-input', () => {
+  it('returns null without exactly one pl-freehand', () => {
     assert.isNull(parseFreehandQuestionHtml('<p>Hello</p>', { autograde: true }));
   });
 });
 
 describe('built-in backgrounds', () => {
-  it('ship with pl-tablet-input and are recognized by file name', async () => {
+  it('ship with pl-freehand and are recognized by file name', async () => {
     for (const id of BUILT_IN_BACKGROUND_IDS) {
       assert.isTrue(await fs.pathExists(builtInBackgroundPath(id)));
       assert.equal(builtInBackgroundForFile(path.basename(builtInBackgroundPath(id))), id);
@@ -161,10 +161,10 @@ describe('question files', () => {
     );
   });
 
-  it('drops undone strokes from a raw pl-tablet-input answer used as the reference', async () => {
+  it('drops undone strokes from a raw pl-freehand answer used as the reference', async () => {
     await fs.writeFile(
       path.join(questionPath, 'question.html'),
-      '<pl-tablet-input answers-name="x" reference-file="ref.json"></pl-tablet-input>',
+      '<pl-freehand answers-name="x" reference-file="ref.json"></pl-freehand>',
     );
     await fs.writeJson(path.join(questionPath, 'ref.json'), {
       version: 1,

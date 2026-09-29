@@ -32,7 +32,7 @@ export function InstructorQuestionPreview({
   aiGradingPreviewUrl?: string;
   renderSubmissionSearchParams: URLSearchParams;
   readmeHtml: string;
-  /** Link to the freehand question builder, for editors of `pl-tablet-input` questions. */
+  /** Link to the freehand question builder, for editors of `pl-freehand` questions. */
   freehandEditorUrl: string | null;
   questionCopyTargets: CopyTarget[] | null;
   resLocals: ResLocalsForPage<'instructor-question'> & ResLocalsQuestionRender;

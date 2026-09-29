@@ -24,7 +24,7 @@
         { "id": "template/file-editor/fixed", "manualPoints": 1 },
         { "id": "template/file-upload/fixed", "manualPoints": 1 },
         { "id": "template/image-capture/static", "autoPoints": 1 },
-        { "id": "template/tablet-input/freehand", "manualPoints": 1 }
+        { "id": "template/freehand/basic", "manualPoints": 1 }
       ]
     },
     {

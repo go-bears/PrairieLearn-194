@@ -1,4 +1,4 @@
-"""Ink geometry for pl-tablet-input: parsing strokes and comparing a drawing to a reference.
+"""Ink geometry for pl-freehand: parsing strokes and comparing a drawing to a reference.
 
 All geometry is in logical canvas pixels, so tolerances are independent of the
 normalized [0, 1] coordinates stored in answers.

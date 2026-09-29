@@ -174,7 +174,7 @@
   /** Scrubbable playback of a submitted answer's strokes over time. */
   function setupReplay(root, answer, renderer) {
     const [button, slider, label] = ['replay', 'replay-time', 'replay-label'].map((name) =>
-      root.querySelector(`.js-tablet-input-${name}`),
+      root.querySelector(`.js-freehand-${name}`),
     );
     const duration =
       answer.responseDuration ??
@@ -192,7 +192,7 @@
     function showPlaying(playing) {
       const verb = playing ? 'pause' : 'play';
       button.innerHTML = `<i class="bi bi-${verb}-fill" aria-hidden="true"></i>`;
-      button.setAttribute('aria-label', `${playing ? 'Pause' : 'Play'} tablet input replay`);
+      button.setAttribute('aria-label', `${playing ? 'Pause' : 'Play'} drawing replay`);
     }
 
     function stop() {
@@ -223,18 +223,18 @@
 
   function init(root) {
     const options = JSON.parse(root.dataset.options);
-    const canvas = root.querySelector('.pl-tablet-input-canvas');
+    const canvas = root.querySelector('.pl-freehand-canvas');
     const renderer = createRenderer(canvas, options);
     if (options.replay) return setupReplay(root, options.initialAnswer, renderer);
     if (!options.editable) return renderer.strokes(options.initialAnswer?.strokes ?? []);
 
-    const input = root.querySelector('.js-tablet-input-answer');
+    const input = root.querySelector('.js-freehand-answer');
     const save = () => (input.value = JSON.stringify(recorder.serialize()));
     const recorder = createRecorder(canvas, options, renderer, save);
-    root.querySelector('.js-tablet-input-undo').addEventListener('click', recorder.undo);
-    root.querySelector('.js-tablet-input-clear').addEventListener('click', recorder.clear);
+    root.querySelector('.js-freehand-undo').addEventListener('click', recorder.undo);
+    root.querySelector('.js-freehand-clear').addEventListener('click', recorder.clear);
     save();
   }
 
-  window.PLTabletInput = { init, createRenderer, createRecorder };
+  window.PLFreehand = { init, createRenderer, createRecorder };
 })();

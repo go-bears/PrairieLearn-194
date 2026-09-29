@@ -1,8 +1,8 @@
 from typing import Any
 
+import freehand_ink as ink
 import numpy as np
 import pytest
-import tablet_ink as ink
 
 
 def answer(*strokes: list[tuple[float, float]], undone: bool = False) -> dict:

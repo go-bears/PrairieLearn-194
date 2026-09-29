@@ -2,22 +2,22 @@
 // Run `make update-element-schemas` to regenerate after adding or removing an
 // element schema module under `./elements`.
 import { element as plCheckbox } from './elements/pl-checkbox.js';
+import { element as plFreehand } from './elements/pl-freehand.js';
 import { element as plIntegerInput } from './elements/pl-integer-input.js';
 import { element as plMultipleChoice } from './elements/pl-multiple-choice.js';
 import { element as plNumberInput } from './elements/pl-number-input.js';
 import { element as plOrderBlocks } from './elements/pl-order-blocks.js';
 import { element as plStringInput } from './elements/pl-string-input.js';
 import { element as plSymbolicInput } from './elements/pl-symbolic-input.js';
-import { element as plTabletInput } from './elements/pl-tablet-input.js';
 import type { ElementSchemaModule } from './types.js';
 
 export const elementModules: ElementSchemaModule[] = [
   plCheckbox,
+  plFreehand,
   plIntegerInput,
   plMultipleChoice,
   plNumberInput,
   plOrderBlocks,
   plStringInput,
   plSymbolicInput,
-  plTabletInput,
 ];

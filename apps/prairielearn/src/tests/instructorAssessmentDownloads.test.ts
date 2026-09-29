@@ -5,12 +5,13 @@ import type { Element } from 'domhandler';
 import * as unzipper from 'unzipper';
 import { afterAll, assert, beforeAll, describe, it } from 'vitest';
 
-import { queryRow } from '@prairielearn/postgres';
+import { execute, queryRow } from '@prairielearn/postgres';
 import { generatePrefixCsrfToken } from '@prairielearn/signed-token';
 
 import { getAssessmentTrpcUrl } from '../lib/client/url.js';
 import { config } from '../lib/config.js';
 import { type Assessment, type User, type Variant, VariantSchema } from '../lib/db-types.js';
+import { FREEHAND_TELEMETRY_MIMETYPE } from '../lib/freehand-question.shared.js';
 import type { ResLocalsForPage } from '../lib/res-locals.js';
 import { selectAssessmentSetById } from '../models/assessment-set.js';
 import { selectAssessmentById, selectAssessmentByTid } from '../models/assessment.js';
@@ -284,6 +285,63 @@ describe('Instructor Assessment Downloads', { timeout: 60_000 }, function () {
       assert.equal(data[0]['Assessment'], 'Exam 1');
       assert.equal(data[0]['Question'], 'addNumbers');
       assert.equal(data[0]['Correct'], 'TRUE');
+    });
+  });
+
+  describe('10b. Pen telemetry downloads', function () {
+    const telemetryFile = {
+      name: 'ink-telemetry.json',
+      contents: Buffer.from('{"strokes":[]}').toString('base64'),
+      mimetype: FREEHAND_TELEMETRY_MIMETYPE,
+    };
+    const uploadedFile = { name: 'notes.txt', contents: Buffer.from('hello').toString('base64') };
+
+    function downloadUrl(suffix: string): string {
+      const link = locals
+        .$(`a:contains('${suffix}')`)
+        .filter((_, el) => locals.$(el).text().trim().endsWith(suffix));
+      assert.lengthOf(link, 1);
+      return locals.siteUrl + link.attr('href');
+    }
+
+    function submittedFileNames(data: any[]): string[] {
+      return JSON.parse(data[0]['Submitted answer'])._files.map(
+        (file: { name: string }) => file.name,
+      );
+    }
+
+    beforeAll(async () => {
+      await execute(
+        `UPDATE submissions
+         SET submitted_answer = submitted_answer || jsonb_build_object('_files', $1::jsonb)
+         WHERE id = (SELECT max(id) FROM submissions)`,
+        [JSON.stringify([telemetryFile, uploadedFile])],
+      );
+    });
+
+    it('should leave telemetry out of the submissions CSVs', async () => {
+      for (const suffix of [
+        '_all_submissions.csv',
+        '_final_submissions.csv',
+        '_best_submissions.csv',
+      ]) {
+        const data = await downloadCsv(downloadUrl(suffix));
+        assert.deepEqual(submittedFileNames(data), ['notes.txt'], suffix);
+      }
+    });
+
+    it('should include telemetry in the opt-in CSV', async () => {
+      const data = await downloadCsv(downloadUrl('_all_submissions_with_pen_telemetry.csv'));
+      assert.deepEqual(submittedFileNames(data), ['ink-telemetry.json', 'notes.txt']);
+    });
+
+    it('should include telemetry in the submitted files zip', async () => {
+      const res = await fetch(downloadUrl('_all_files.zip'));
+      assert.equal(res.status, 200);
+      const zip = await unzipper.Open.buffer(Buffer.from(await res.arrayBuffer()));
+      const names = zip.files.map((file) => file.path);
+      assert.isTrue(names.some((name) => name.endsWith('_ink-telemetry.json')));
+      assert.isTrue(names.some((name) => name.endsWith('_notes.txt')));
     });
   });
 

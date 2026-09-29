@@ -103,6 +103,18 @@ Coordinates are normalized to `[0, 1]`. `responseDuration`, `startedAt`, `endedA
 
 The `events` array records stroke lifecycle and editing actions. Undo and clear hide strokes from the canvas by marking them `undone` with an `undoneAt` time, but retain their points and timing in the submitted answer for analysis.
 
+### Where telemetry is stored
+
+With `telemetry="true"`, the full response above is saved as a separate file attached to the submission, named `<answers-name>-telemetry.json`. The submitted answer itself keeps only what grading needs: the canvas size and the visible strokes as `x`/`y` points. Replay in the submission panel reads the telemetry file, so each submission can be reconstructed exactly.
+
+Because each file belongs to one submission, it is tied to a specific student (or group) and question. On an assessment's **Downloads** page:
+
+- `all_submissions.csv`, `final_submissions.csv`, and `best_submissions.csv` leave telemetry out.
+- `all_submissions_with_pen_telemetry.csv` is the opt-in export that includes it.
+- The submitted files downloads (`all_files.zip`, `final_files.zip`, `best_files.zip`) include each telemetry file, named with the student, question, and submission.
+
+Answers submitted before this change, or with `telemetry="false"`, keep their data in the submitted answer as before.
+
 This element collects raw pen and touch input data. Before using it with real student responses, establish appropriate consent, retention, access, and deletion policies for the course or study.
 
 ## Example implementations

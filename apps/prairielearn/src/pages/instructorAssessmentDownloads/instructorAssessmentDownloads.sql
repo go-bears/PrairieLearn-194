@@ -230,7 +230,25 @@ WITH
       s.date,
       s.id AS submission_id,
       s.date AS submission_date,
-      s.submitted_answer,
+      CASE
+        WHEN $include_telemetry
+        OR NOT (s.submitted_answer ? '_files') THEN s.submitted_answer
+        ELSE jsonb_set(
+          s.submitted_answer,
+          '{_files}',
+          COALESCE(
+            (
+              SELECT
+                jsonb_agg(f)
+              FROM
+                jsonb_array_elements(s.submitted_answer -> '_files') AS f
+              WHERE
+                f ->> 'mimetype' IS DISTINCT FROM $telemetry_mimetype
+            ),
+            '[]'::jsonb
+          )
+        )
+      END AS submitted_answer,
       s.partial_scores,
       s.override_score,
       s.credit,

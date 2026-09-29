@@ -46,6 +46,7 @@ import {
   type Variant,
   VariantSchema,
 } from '../../lib/db-types.js';
+import { FREEHAND_TELEMETRY_MIMETYPE } from '../../lib/freehand-question.shared.js';
 import { getGroupConfig } from '../../lib/groups.js';
 import { idsEqual } from '../../lib/id.js';
 import { type ResLocalsForPage, typedAsyncHandler } from '../../lib/res-locals.js';
@@ -241,6 +242,7 @@ function buildFilenames({
     finalSubmissionsCsvFilename: prefix + 'final_submissions.csv',
     bestSubmissionsCsvFilename: prefix + 'best_submissions.csv',
     allSubmissionsCsvFilename: prefix + 'all_submissions.csv',
+    allSubmissionsWithTelemetryCsvFilename: prefix + 'all_submissions_with_pen_telemetry.csv',
     filesForManualGradingZipFilename: prefix + 'files_for_manual_grading.zip',
     finalFilesZipFilename: prefix + 'final_files.zip',
     bestFilesZipFilename: prefix + 'best_files.zip',
@@ -668,16 +670,28 @@ router.get(
       await pipeline(cursor.stream(100), stringifier, res);
     } else if (
       req.params.filename === filenames.allSubmissionsCsvFilename ||
+      req.params.filename === filenames.allSubmissionsWithTelemetryCsvFilename ||
       req.params.filename === filenames.finalSubmissionsCsvFilename ||
       req.params.filename === filenames.bestSubmissionsCsvFilename
     ) {
-      const include_all = req.params.filename === filenames.allSubmissionsCsvFilename;
+      // Pen telemetry is only exported when the instructor chooses the telemetry download.
+      const include_telemetry =
+        req.params.filename === filenames.allSubmissionsWithTelemetryCsvFilename;
+      const include_all =
+        include_telemetry || req.params.filename === filenames.allSubmissionsCsvFilename;
       const include_final = req.params.filename === filenames.finalSubmissionsCsvFilename;
       const include_best = req.params.filename === filenames.bestSubmissionsCsvFilename;
 
       const cursor = await sqldb.queryCursor(
         sql.assessment_instance_submissions,
-        { assessment_id: res.locals.assessment.id, include_all, include_final, include_best },
+        {
+          assessment_id: res.locals.assessment.id,
+          include_all,
+          include_final,
+          include_best,
+          include_telemetry,
+          telemetry_mimetype: FREEHAND_TELEMETRY_MIMETYPE,
+        },
         AssessmentInstanceSubmissionRowSchema,
       );
 
@@ -772,7 +786,14 @@ router.get(
 
       const cursor = await sqldb.queryCursor(
         sql.assessment_instance_submissions,
-        { assessment_id: res.locals.assessment.id, include_all, include_final, include_best },
+        {
+          assessment_id: res.locals.assessment.id,
+          include_all,
+          include_final,
+          include_best,
+          include_telemetry: true,
+          telemetry_mimetype: FREEHAND_TELEMETRY_MIMETYPE,
+        },
         AssessmentInstanceSubmissionRowSchema,
       );
 

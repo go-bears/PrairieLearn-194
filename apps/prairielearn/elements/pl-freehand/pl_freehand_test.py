@@ -1,3 +1,4 @@
+import base64
 import importlib
 import json
 from pathlib import Path
@@ -227,3 +228,57 @@ def test_generated_test_answers_without_reference_are_valid_and_ungraded(
     )
     pl_freehand.parse(element(), parsed)
     assert parsed["format_errors"] == {}
+
+
+TELEMETRY_ANSWER: dict[str, Any] = {
+    "version": 1,
+    "canvas": {"width": 800, "height": 400},
+    "responseDuration": 900,
+    "events": [{"type": "stroke-start", "at": 100, "strokeIndex": 0}],
+    "strokes": [
+        {
+            "startedAt": 100,
+            "points": [
+                {"x": 0.1, "y": 0.1, "dt": 100, "p": 0.4, "pointerType": "pen"},
+                {"x": 0.9, "y": 0.9, "dt": 180, "p": 0.6, "pointerType": "pen"},
+            ],
+        },
+        {"undone": True, "points": [{"x": 0.5, "y": 0.5, "dt": 300}]},
+    ],
+}
+
+
+def test_parse_moves_telemetry_to_a_submission_file() -> None:
+    data = parse(json.dumps(TELEMETRY_ANSWER), telemetry="true")
+    assert data["submitted_answers"]["ink"] == {
+        **DIAGONAL,
+        "canvas": {"width": 800, "height": 400},
+    }
+    [file] = data["submitted_answers"]["_files"]
+    assert file["name"] == "ink-telemetry.json"
+    assert file["mimetype"] == pl_freehand.TELEMETRY_MIMETYPE
+    assert json.loads(base64.b64decode(file["contents"])) == TELEMETRY_ANSWER
+
+
+def test_parse_keeps_answers_without_telemetry_inline() -> None:
+    data = parse(json.dumps(TELEMETRY_ANSWER))
+    assert data["submitted_answers"]["ink"] == TELEMETRY_ANSWER
+    assert "_files" not in data["submitted_answers"]
+
+
+def test_answer_with_telemetry_reads_the_file_and_falls_back_to_inline_answers() -> (
+    None
+):
+    data = parse(json.dumps(TELEMETRY_ANSWER), telemetry="true")
+    assert pl_freehand.answer_with_telemetry(data, "ink") == TELEMETRY_ANSWER
+    older = make_question_data(submitted_answers={"ink": TELEMETRY_ANSWER})
+    assert pl_freehand.answer_with_telemetry(older, "ink") == TELEMETRY_ANSWER
+
+
+def test_grading_uses_the_answer_without_telemetry() -> None:
+    data = parse(json.dumps(TELEMETRY_ANSWER), telemetry="true")
+    graded = make_question_data(
+        correct_answers={"ink": DIAGONAL}, submitted_answers=data["submitted_answers"]
+    )
+    pl_freehand.grade(element(telemetry="true"), graded)
+    assert graded["partial_scores"]["ink"]["score"] == 1

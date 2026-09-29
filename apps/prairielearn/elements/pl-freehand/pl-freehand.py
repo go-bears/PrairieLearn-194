@@ -1,3 +1,4 @@
+import base64
 import json
 import os
 import pathlib
@@ -11,6 +12,20 @@ import prairielearn as pl
 
 SCHEMA_PATH = pathlib.Path(__file__).parent / "schemas" / "pl-freehand.json"
 REFERENCE_COLOR = "#198754"
+TELEMETRY_MIMETYPE = "application/vnd.prairielearn.freehand-telemetry+json"
+"""Marks telemetry files; assessment downloads leave these out of submission CSVs by default."""
+
+
+def telemetry_file_name(name: str) -> str:
+    return f"{name}-telemetry.json"
+
+
+def answer_with_telemetry(data: pl.QuestionData, name: str) -> Any:
+    """The submitted answer, or its full recording when telemetry was saved as a file."""
+    for file in data["submitted_answers"].get("_files", []):
+        if file.get("name") == telemetry_file_name(name):
+            return json.loads(base64.b64decode(file["contents"]))
+    return data["submitted_answers"].get(name)
 
 
 @dataclass(frozen=True)
@@ -104,8 +119,10 @@ def render(element_html: str, data: pl.QuestionData) -> str:
     s = Settings.from_html(element_html)
     panel = data["panel"]
     editable = data["editable"] and panel == "question"
-    answer = data["correct_answers" if panel == "answer" else "submitted_answers"].get(
-        s.name
+    answer = (
+        data["correct_answers"].get(s.name)
+        if panel == "answer"
+        else answer_with_telemetry(data, s.name)
     )
     if panel == "answer" and answer is None:
         return ""
@@ -148,11 +165,21 @@ def render(element_html: str, data: pl.QuestionData) -> str:
 def parse(element_html: str, data: pl.QuestionData) -> None:
     s = Settings.from_html(element_html)
     try:
-        data["submitted_answers"][s.name] = parse_answer(
-            data["submitted_answers"].get(s.name), s
-        )
+        answer = parse_answer(data["submitted_answers"].get(s.name), s)
     except ValueError as exc:
         data["format_errors"][s.name] = str(exc)
+        return
+    if s.telemetry:
+        # Keep pen telemetry in its own submission file, so the graded answer (and the
+        # CSVs built from it) only holds the drawing itself.
+        pl.add_submitted_file(
+            data,
+            telemetry_file_name(s.name),
+            raw_contents=json.dumps(answer),
+            mimetype=TELEMETRY_MIMETYPE,
+        )
+        answer = {**ink.compact(answer), "canvas": answer.get("canvas")}
+    data["submitted_answers"][s.name] = answer
 
 
 def parse_answer(raw: Any, s: Settings) -> dict[str, Any]:

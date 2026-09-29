@@ -59,7 +59,7 @@ def polylines(answer: Any, width: float, height: float) -> list[Points]:
 
 
 def compact(answer: Any) -> dict[str, Any]:
-    """Visible strokes only, reduced to rounded coordinates, for use as a reference."""
+    """Visible strokes only, reduced to rounded coordinates: a reference, or an answer without telemetry."""
     return {
         "version": 1,
         "strokes": [

@@ -20,6 +20,7 @@ export interface Filenames {
   finalSubmissionsCsvFilename: string;
   bestSubmissionsCsvFilename: string;
   allSubmissionsCsvFilename: string;
+  allSubmissionsWithTelemetryCsvFilename: string;
   filesForManualGradingZipFilename: string;
   finalFilesZipFilename: string;
   bestFilesZipFilename: string;
@@ -294,7 +295,19 @@ export function InstructorAssessmentDownloads({
               <DownloadRow
                 downloadUrl={`${downloadsBase}${filenames.allSubmissionsCsvFilename}`}
                 filename={filenames.allSubmissionsCsvFilename}
-                description={`All submitted answers for all ${identity}s for all assessment instances. Not all submitted answers will have been used to compute the final score, as some may have been superseded by subsequent attempts.`}
+                description={`All submitted answers for all ${identity}s for all assessment instances. Not all submitted answers will have been used to compute the final score, as some may have been superseded by subsequent attempts. Pen telemetry from freehand questions is left out.`}
+              />
+              <DownloadRow
+                downloadUrl={`${downloadsBase}${filenames.allSubmissionsWithTelemetryCsvFilename}`}
+                filename={filenames.allSubmissionsWithTelemetryCsvFilename}
+                description={
+                  <>
+                    The same as <code>{filenames.allSubmissionsCsvFilename}</code>, plus the pen
+                    telemetry (timing, pressure, tilt, and pointer type) that freehand questions
+                    collect with <code>telemetry=&quot;true&quot;</code>. Telemetry is also included
+                    as separate files in the submitted files downloads below.
+                  </>
+                }
               />
               <DownloadRow
                 downloadUrl={`${downloadsBase}${filenames.finalSubmissionsCsvFilename}`}

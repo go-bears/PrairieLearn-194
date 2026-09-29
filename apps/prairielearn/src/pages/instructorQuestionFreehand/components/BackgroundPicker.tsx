@@ -15,7 +15,7 @@ import {
 } from '../../../lib/freehand-question.shared.js';
 
 type Canvas = FreehandQuestion['canvas'];
-type CustomBackground = Extract<BackgroundInput, { kind: 'existing' | 'upload' }>;
+type UploadBackground = Extract<BackgroundInput, { kind: 'upload' }>;
 
 export interface BackgroundChoice {
   background: BackgroundInput;
@@ -40,42 +40,67 @@ async function imageSize(url: string) {
   return { width: image.naturalWidth, height: image.naturalHeight };
 }
 
-const customName = (background: CustomBackground) =>
-  background.kind === 'existing' ? background.fileName : background.name;
+/** Explains how an oversized image is scaled to fit the canvas, if it is. */
+function scaleNotice(size: Canvas, canvas: Canvas): string | null {
+  return canvas.width === size.width
+    ? null
+    : `This image is ${size.width} × ${size.height} px, so the canvas will use ${canvas.width} × ${canvas.height} px.`;
+}
 
 /**
- * Chooses among the built-in grids, a custom image (already saved or newly
- * uploaded), or no background. Remembers the custom image so instructors can
- * switch to a grid and back without uploading it again.
+ * Chooses among the built-in grids, images already in the question's
+ * `clientFilesQuestion/` folder, a newly uploaded image, or no background.
+ * Remembers the upload so instructors can switch away and back without
+ * uploading it again.
  */
 export function BackgroundPicker({
   initial,
   builtInUrls,
+  questionImages,
+  questionFileUrl,
   onChange,
 }: {
   initial: BackgroundChoice;
   builtInUrls: Record<BuiltInBackgroundId, string>;
+  /** Image files in the question's `clientFilesQuestion/` folder. */
+  questionImages: string[];
+  questionFileUrl: (fileName: string) => string;
   onChange: (choice: BackgroundChoice) => void;
 }) {
   const [selected, setSelected] = useState(initial.background);
-  const [custom, setCustom] = useState<{
-    background: CustomBackground;
+  const [notice, setNotice] = useState<string | null>(null);
+  const [upload, setUpload] = useState<{
+    background: UploadBackground;
     choice: BackgroundChoice;
-    /** Explains how an oversized image was scaled to fit the canvas. */
     notice: string | null;
-  } | null>(
-    initial.background.kind === 'existing'
-      ? { background: initial.background, choice: initial, notice: null }
-      : null,
-  );
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const images = [
+    ...new Set([
+      ...questionImages,
+      ...(initial.background.kind === 'existing' ? [initial.background.fileName] : []),
+    ]),
+  ];
 
-  function choose(choice: BackgroundChoice) {
+  function choose(choice: BackgroundChoice, choiceNotice: string | null = null) {
     setSelected(choice.background);
+    setNotice(choiceNotice);
     onChange(choice);
   }
 
-  async function upload(file: File | undefined) {
+  async function chooseQuestionImage(fileName: string) {
+    // Show the choice right away; the canvas updates once the image is measured.
+    setSelected({ kind: 'existing', fileName });
+    const url = questionFileUrl(fileName);
+    const size = await imageSize(url).catch(() => null);
+    const canvas = size && canvasForImage(size.width, size.height);
+    choose(
+      { background: { kind: 'existing', fileName }, url, canvas },
+      size && canvas && scaleNotice(size, canvas),
+    );
+  }
+
+  async function uploadImage(file: File | undefined) {
     if (!file) return;
     if (!isBackgroundImageType(file.type)) {
       setError('Choose a PNG, JPEG, GIF, or WebP image.');
@@ -89,22 +114,20 @@ export function BackgroundPicker({
     const url = URL.createObjectURL(file);
     const [size, contentBase64] = await Promise.all([imageSize(url), readAsBase64(file)]);
     const canvas = canvasForImage(size.width, size.height);
-    const notice =
-      canvas.width === size.width
-        ? null
-        : `This image is ${size.width} × ${size.height} px, so the canvas will use ${canvas.width} × ${canvas.height} px.`;
-    const background: CustomBackground = {
+    const background: UploadBackground = {
       kind: 'upload',
       name: file.name,
       type: file.type,
       contentBase64,
     };
-    const choice = { background, url, canvas };
-    setCustom({ background, choice, notice });
-    choose(choice);
+    const next = {
+      background,
+      choice: { background, url, canvas },
+      notice: scaleNotice(size, canvas),
+    };
+    setUpload(next);
+    choose(next.choice, next.notice);
   }
-
-  const isCustomSelected = selected.kind === 'existing' || selected.kind === 'upload';
 
   const radio = (id: string, label: string, checked: boolean, onSelect: () => void) => (
     <div key={id} className="form-check">
@@ -138,9 +161,17 @@ export function BackgroundPicker({
             }),
         ),
       )}
-      {custom &&
-        radio('custom', `Custom image: ${customName(custom.background)}`, isCustomSelected, () =>
-          choose(custom.choice),
+      {images.map((fileName) =>
+        radio(
+          `file-${fileName}`,
+          `Question file: ${fileName}`,
+          selected.kind === 'existing' && selected.fileName === fileName,
+          () => void chooseQuestionImage(fileName),
+        ),
+      )}
+      {upload &&
+        radio('upload', `Uploaded: ${upload.background.name}`, selected.kind === 'upload', () =>
+          choose(upload.choice, upload.notice),
         )}
       {radio('none', 'None (blank canvas)', selected.kind === 'none', () =>
         choose({ background: { kind: 'none' }, url: null, canvas: null }),
@@ -157,19 +188,18 @@ export function BackgroundPicker({
         aria-describedby="background-upload-help"
         aria-invalid={error ? true : undefined}
         aria-errormessage={error ? 'background-upload-error' : undefined}
-        onChange={(event) => upload(event.target.files?.[0])}
+        onChange={(event) => uploadImage(event.target.files?.[0])}
       />
       {error && (
         <div id="background-upload-error" className="invalid-feedback d-block">
           {error}
         </div>
       )}
-      {custom?.notice && isCustomSelected && (
-        <div className="form-text text-warning-emphasis">{custom.notice}</div>
-      )}
+      {notice && <div className="form-text text-warning-emphasis">{notice}</div>}
       <small id="background-upload-help" className="form-text text-muted d-block">
-        The canvas takes the background's proportions, up to {MAX_CANVAS_DIMENSION} px on the longer
-        side.
+        Images added to this question's <code>clientFilesQuestion/</code> folder on the{' '}
+        <strong>Files</strong> tab are listed as question files. The canvas takes the background's
+        proportions, up to {MAX_CANVAS_DIMENSION} px on the longer side.
       </small>
     </fieldset>
   );

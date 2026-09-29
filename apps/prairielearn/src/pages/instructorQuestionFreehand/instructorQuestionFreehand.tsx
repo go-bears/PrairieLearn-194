@@ -11,7 +11,7 @@ import { coreElementAssetPath } from '../../lib/assets.js';
 import { extractPageContext } from '../../lib/client/page-context.js';
 import { getCourseTrpcUrl } from '../../lib/client/url.js';
 import { config } from '../../lib/config.js';
-import { readFreehandQuestion } from '../../lib/freehand-question.js';
+import { listQuestionImages, readFreehandQuestion } from '../../lib/freehand-question.js';
 import {
   BUILT_IN_BACKGROUNDS,
   BUILT_IN_BACKGROUND_IDS,
@@ -51,8 +51,10 @@ router.get(
       throw new error.HttpStatusError(403, 'Cannot edit questions in the example course.');
     }
 
-    const [state, courseInstances, referencing] = await Promise.all([
-      readFreehandQuestion(path.join(course.path, 'questions', question.qid)),
+    const questionPath = path.join(course.path, 'questions', question.qid);
+    const [state, questionImages, courseInstances, referencing] = await Promise.all([
+      readFreehandQuestion(questionPath),
+      listQuestionImages(questionPath),
       selectCourseInstancesWithStaffAccess({ course, authzData }),
       selectAssessmentsReferencingQuestions({ course_id: course.id, question_ids: [question.id] }),
     ]);
@@ -107,6 +109,7 @@ router.get(
               hasUnmanagedContent={state.hasUnmanagedContent}
               assessments={assessments}
               builtInBackgroundUrls={builtInBackgroundUrls}
+              questionImages={questionImages}
             />
           </Hydrate>
         ),

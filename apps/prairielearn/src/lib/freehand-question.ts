@@ -157,6 +157,25 @@ export function builtInBackgroundPath(id: BuiltInBackgroundId): string {
   return path.join(APP_ROOT_PATH, 'elements', 'pl-freehand', 'clientFilesElement', fileName);
 }
 
+const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp']);
+
+/** Image files directly in the question's `clientFilesQuestion/` folder, except the built-in grids. */
+export async function listQuestionImages(questionPath: string): Promise<string[]> {
+  const builtIn = new Set(Object.values(BUILT_IN_BACKGROUNDS).map(({ fileName }) => fileName));
+  const entries = await fs
+    .readdir(path.join(questionPath, 'clientFilesQuestion'), { withFileTypes: true })
+    .catch(() => []);
+  return entries
+    .filter(
+      (entry) =>
+        entry.isFile() &&
+        IMAGE_EXTENSIONS.has(path.extname(entry.name).toLowerCase()) &&
+        !builtIn.has(entry.name),
+    )
+    .map((entry) => entry.name)
+    .sort();
+}
+
 export function sanitizeImageFileName(name: string): string {
   return (
     path

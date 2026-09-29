@@ -34,6 +34,8 @@ interface EditorProps {
   hasUnmanagedContent: boolean;
   assessments: AssessmentOption[];
   builtInBackgroundUrls: Record<BuiltInBackgroundId, string>;
+  /** Image files in the question's `clientFilesQuestion/` folder. */
+  questionImages: string[];
 }
 
 interface FormValues {
@@ -72,6 +74,7 @@ function FreehandQuestionForm({
   hasUnmanagedContent,
   assessments,
   builtInBackgroundUrls,
+  questionImages,
 }: EditorProps) {
   const trpc = useTRPC();
   const saveMutation = useMutation(trpc.freehandQuestions.save.mutationOptions());
@@ -79,6 +82,8 @@ function FreehandQuestionForm({
   const canvasRef = useRef<ReferenceCanvasHandle>(null);
   const [referenceError, setReferenceError] = useState<string | null>(null);
   const questionUrl = `${urlPrefix}/question/${questionId}`;
+  const questionFileUrl = (fileName: string) =>
+    `${questionUrl}/clientFilesQuestion/${encodeURIComponent(fileName)}`;
 
   const initialBackground = run((): BackgroundChoice => {
     const fileName = initialQuestion.backgroundImage;
@@ -88,9 +93,7 @@ function FreehandQuestionForm({
       : fileName
         ? { kind: 'existing' as const, fileName }
         : { kind: 'none' as const };
-    const url = builtIn
-      ? builtInBackgroundUrls[builtIn]
-      : fileName && `${questionUrl}/clientFilesQuestion/${encodeURIComponent(fileName)}`;
+    const url = builtIn ? builtInBackgroundUrls[builtIn] : fileName && questionFileUrl(fileName);
     return { background, url, canvas: initialQuestion.canvas };
   });
   const [surface, setSurface] = useState<Surface>({
@@ -202,6 +205,8 @@ function FreehandQuestionForm({
           <BackgroundPicker
             initial={initialBackground}
             builtInUrls={builtInBackgroundUrls}
+            questionImages={questionImages}
+            questionFileUrl={questionFileUrl}
             onChange={changeBackground}
           />
 

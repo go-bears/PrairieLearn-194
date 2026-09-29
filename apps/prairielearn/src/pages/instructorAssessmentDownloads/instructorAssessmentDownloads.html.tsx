@@ -20,11 +20,12 @@ export interface Filenames {
   finalSubmissionsCsvFilename: string;
   bestSubmissionsCsvFilename: string;
   allSubmissionsCsvFilename: string;
-  allSubmissionsWithTelemetryCsvFilename: string;
   filesForManualGradingZipFilename: string;
   finalFilesZipFilename: string;
   bestFilesZipFilename: string;
   allFilesZipFilename: string;
+  freehandSummaryCsvFilename: string;
+  freehandTelemetryJsonFilename: string;
   canvasScoresCsvFilename: string;
   canvasPointsCsvFilename: string;
   groupsCsvFilename?: string;
@@ -295,19 +296,7 @@ export function InstructorAssessmentDownloads({
               <DownloadRow
                 downloadUrl={`${downloadsBase}${filenames.allSubmissionsCsvFilename}`}
                 filename={filenames.allSubmissionsCsvFilename}
-                description={`All submitted answers for all ${identity}s for all assessment instances. Not all submitted answers will have been used to compute the final score, as some may have been superseded by subsequent attempts. Pen telemetry from freehand questions is left out.`}
-              />
-              <DownloadRow
-                downloadUrl={`${downloadsBase}${filenames.allSubmissionsWithTelemetryCsvFilename}`}
-                filename={filenames.allSubmissionsWithTelemetryCsvFilename}
-                description={
-                  <>
-                    The same as <code>{filenames.allSubmissionsCsvFilename}</code>, plus the pen
-                    telemetry (timing, pressure, tilt, and pointer type) that freehand questions
-                    collect with <code>telemetry=&quot;true&quot;</code>. Telemetry is also included
-                    as separate files in the submitted files downloads below.
-                  </>
-                }
+                description={`All submitted answers for all ${identity}s for all assessment instances. Not all submitted answers will have been used to compute the final score, as some may have been superseded by subsequent attempts. Freehand drawings appear as a summary; see the freehand downloads for details.`}
               />
               <DownloadRow
                 downloadUrl={`${downloadsBase}${filenames.finalSubmissionsCsvFilename}`}
@@ -339,6 +328,31 @@ export function InstructorAssessmentDownloads({
                         </>
                       )}
                     </code>
+                  </>
+                }
+              />
+              <DownloadRow
+                downloadUrl={`${downloadsBase}${filenames.freehandSummaryCsvFilename}`}
+                filename={filenames.freehandSummaryCsvFilename}
+                description={
+                  <>
+                    An overview of each freehand drawing in every submission, one row per {identity}
+                    , question, submission, and canvas: score, overlap with the answer key, stroke,
+                    undo, clear, and cancelled-stroke counts, timing, and where the drawing started
+                    and ended. Times are milliseconds after the question was opened; positions are
+                    canvas pixels.
+                  </>
+                }
+              />
+              <DownloadRow
+                downloadUrl={`${downloadsBase}${filenames.freehandTelemetryJsonFilename}`}
+                filename={filenames.freehandTelemetryJsonFilename}
+                description={
+                  <>
+                    The complete recording of every freehand drawing in every submission, as JSON:
+                    each stroke's points and timing, plus pen pressure, tilt, and pointer type for
+                    questions with <code>telemetry=&quot;true&quot;</code>. The same recordings are
+                    in the submitted files downloads as <code>&lt;canvas&gt;-strokes.json</code>.
                   </>
                 }
               />

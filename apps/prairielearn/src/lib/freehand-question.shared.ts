@@ -8,8 +8,6 @@ import { z } from 'zod';
 
 export const FREEHAND_TEMPLATE_QID = 'template/freehand/basic';
 export const REFERENCE_FILE_NAME = 'reference.json';
-/** The file type pl-freehand gives telemetry files; must match `TELEMETRY_MIMETYPE` in pl-freehand.py. */
-export const FREEHAND_TELEMETRY_MIMETYPE = 'application/vnd.prairielearn.freehand-telemetry+json';
 export const MAX_CANVAS_DIMENSION = 1600;
 /** Base64-encoded, this keeps the save request under the 5 MB JSON body limit. */
 export const MAX_BACKGROUND_IMAGE_BYTES = 3 * 1024 * 1024;

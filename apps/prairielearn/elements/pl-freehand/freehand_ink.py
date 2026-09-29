@@ -69,6 +69,51 @@ def compact(answer: Any) -> dict[str, Any]:
     }
 
 
+def _dicts(value: Any) -> list[dict[str, Any]]:
+    return (
+        [item for item in value if isinstance(item, dict)]
+        if isinstance(value, list)
+        else []
+    )
+
+
+def _number(value: Any) -> float | None:
+    return (
+        value
+        if isinstance(value, int | float) and not isinstance(value, bool)
+        else None
+    )
+
+
+def summarize(answer: Any, width: float, height: float) -> dict[str, Any]:
+    """An overview of how a drawing was made, for instructors' exports.
+
+    Returns:
+        Stroke, undo, clear, and cancellation counts; times in elapsed milliseconds
+        since the question was opened; and `start_stroke`/`end_stroke`, the first and
+        last points of the submitted drawing in canvas pixels.
+    """
+    strokes = _dicts(answer.get("strokes"))
+    events = _dicts(answer.get("events"))
+    lines = polylines(answer, width, height)
+    started = [t for s in strokes if (t := _number(s.get("startedAt"))) is not None]
+    ended = [t for s in strokes if (t := _number(s.get("endedAt"))) is not None]
+    return {
+        "strokes_submitted": len(lines),
+        "undo_count": sum(event.get("type") == "undo" for event in events),
+        # A clear logs one event per hidden stroke, all at the same time.
+        "clear_count": len({
+            event.get("at") for event in events if event.get("type") == "clear"
+        }),
+        "cancelled_strokes": sum(bool(stroke.get("cancelled")) for stroke in strokes),
+        "first_stroke_started_ms": min(started, default=None),
+        "last_stroke_ended_ms": max(ended, default=None),
+        "response_duration_ms": _number(answer.get("responseDuration")),
+        "start_stroke": [round(float(v)) for v in lines[0][0]] if lines else None,
+        "end_stroke": [round(float(v)) for v in lines[-1][-1]] if lines else None,
+    }
+
+
 def resample(lines: list[Points], spacing: float) -> Points:
     """Evenly spaced samples (at most ~MAX_SAMPLES) so pen speed does not affect weight."""
     total_length = sum(_arc_lengths(line)[-1] for line in lines)

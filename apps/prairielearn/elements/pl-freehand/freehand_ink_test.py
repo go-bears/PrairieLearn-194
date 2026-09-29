@@ -92,3 +92,59 @@ def test_empty_drawing_scores_zero() -> None:
 def test_emptiest_point_is_away_from_reference() -> None:
     x, y = ink.emptiest_point(sample(answer(DIAGONAL)), 100, 100)
     assert abs(x - y) > 0.8
+
+
+def test_summarize_describes_how_the_drawing_was_made() -> None:
+    drawing = {
+        "responseDuration": 5000,
+        "events": [
+            {"type": "undo", "at": 2000, "strokeIndex": 1},
+            {"type": "clear", "at": 3000, "strokeIndex": 0},
+            {"type": "clear", "at": 3000, "strokeIndex": 2},
+        ],
+        "strokes": [
+            {
+                "startedAt": 500,
+                "endedAt": 900,
+                "undone": True,
+                "points": [{"x": 0, "y": 0}],
+            },
+            {
+                "startedAt": 1000,
+                "endedAt": 1500,
+                "undone": True,
+                "cancelled": True,
+                "points": [{"x": 0, "y": 0}],
+            },
+            {
+                "startedAt": 1600,
+                "endedAt": 1700,
+                "undone": True,
+                "points": [{"x": 0, "y": 0}],
+            },
+            {
+                "startedAt": 3500,
+                "endedAt": 4200,
+                "points": [{"x": 0.1, "y": 0.2}, {"x": 0.5, "y": 0.5}],
+            },
+            {"startedAt": 4300, "endedAt": 4800, "points": [{"x": 0.9, "y": 0.8}]},
+        ],
+    }
+    assert ink.summarize(drawing, 200, 100) == {
+        "strokes_submitted": 2,
+        "undo_count": 1,
+        "clear_count": 1,
+        "cancelled_strokes": 1,
+        "first_stroke_started_ms": 500,
+        "last_stroke_ended_ms": 4800,
+        "response_duration_ms": 5000,
+        "start_stroke": [20, 20],
+        "end_stroke": [180, 80],
+    }
+
+
+def test_summarize_a_blank_drawing() -> None:
+    summary = ink.summarize({"strokes": []}, 200, 100)
+    assert summary["strokes_submitted"] == 0
+    assert summary["start_stroke"] is None
+    assert summary["first_stroke_started_ms"] is None

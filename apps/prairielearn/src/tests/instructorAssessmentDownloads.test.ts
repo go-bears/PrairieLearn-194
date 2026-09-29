@@ -11,7 +11,7 @@ import { generatePrefixCsrfToken } from '@prairielearn/signed-token';
 import { getAssessmentTrpcUrl } from '../lib/client/url.js';
 import { config } from '../lib/config.js';
 import { type Assessment, type User, type Variant, VariantSchema } from '../lib/db-types.js';
-import { FREEHAND_TELEMETRY_MIMETYPE } from '../lib/freehand-question.shared.js';
+import { FREEHAND_STROKES_MIMETYPE } from '../lib/freehand-submissions.js';
 import type { ResLocalsForPage } from '../lib/res-locals.js';
 import { selectAssessmentSetById } from '../models/assessment-set.js';
 import { selectAssessmentById, selectAssessmentByTid } from '../models/assessment.js';
@@ -76,7 +76,12 @@ async function assertDownloadSucceeds(url: string, filename: string): Promise<vo
   assert.equal(res.status, 200, `Failed to download ${filename}`);
   if (filename.endsWith('.csv')) {
     const data = csvParse<any>(await res.text(), { columns: true, cast: true });
-    assert.isAtLeast(data.length, 1, `CSV file ${filename} should have at least one row`);
+    // Assessments without freehand questions have nothing to summarize.
+    if (!filename.endsWith('_freehand_summary.csv')) {
+      assert.isAtLeast(data.length, 1, `CSV file ${filename} should have at least one row`);
+    }
+  } else if (filename.endsWith('.json')) {
+    assert.isArray(await res.json(), `JSON file ${filename} should be an array`);
   } else if (filename.endsWith('.zip')) {
     const zip = await unzipper.Open.buffer(Buffer.from(await res.arrayBuffer()));
     assert.isAtLeast(zip.files.length, 1, `ZIP file ${filename} should have at least one file`);
@@ -288,13 +293,35 @@ describe('Instructor Assessment Downloads', { timeout: 60_000 }, function () {
     });
   });
 
-  describe('10b. Pen telemetry downloads', function () {
-    const telemetryFile = {
-      name: 'ink-telemetry.json',
-      contents: Buffer.from('{"strokes":[]}').toString('base64'),
-      mimetype: FREEHAND_TELEMETRY_MIMETYPE,
+  describe('10b. Freehand downloads', function () {
+    const recording = { version: 1, responseDuration: 5000, strokes: [] };
+    const strokesFile = {
+      name: 'ink-strokes.json',
+      contents: Buffer.from(JSON.stringify(recording)).toString('base64'),
+      mimetype: FREEHAND_STROKES_MIMETYPE,
     };
     const uploadedFile = { name: 'notes.txt', contents: Buffer.from('hello').toString('base64') };
+    const freehandAnswer = {
+      element: 'pl-freehand',
+      version: 2,
+      canvas: { width: 800, height: 400 },
+      summary: {
+        strokes_submitted: 2,
+        undo_count: 1,
+        clear_count: 0,
+        cancelled_strokes: 0,
+        first_stroke_started_ms: 800,
+        last_stroke_ended_ms: 4200,
+        response_duration_ms: 5000,
+        start_stroke: [162, 416],
+        end_stroke: [350, 41],
+      },
+    };
+    const freehandScore = {
+      score: 0.874,
+      weight: 1,
+      feedback: { text: '…', coverage_percent: 91, accuracy_percent: 84, overlapping_points: 120 },
+    };
 
     function downloadUrl(suffix: string): string {
       const link = locals
@@ -304,43 +331,74 @@ describe('Instructor Assessment Downloads', { timeout: 60_000 }, function () {
       return locals.siteUrl + link.attr('href');
     }
 
-    function submittedFileNames(data: any[]): string[] {
-      return JSON.parse(data[0]['Submitted answer'])._files.map(
-        (file: { name: string }) => file.name,
-      );
-    }
-
     beforeAll(async () => {
       await execute(
         `UPDATE submissions
-         SET submitted_answer = submitted_answer || jsonb_build_object('_files', $1::jsonb)
+         SET
+           submitted_answer = submitted_answer || jsonb_build_object('ink', $1::jsonb, '_files', $2::jsonb),
+           partial_scores = partial_scores || jsonb_build_object('ink', $3::jsonb)
          WHERE id = (SELECT max(id) FROM submissions)`,
-        [JSON.stringify([telemetryFile, uploadedFile])],
+        [
+          JSON.stringify(freehandAnswer),
+          JSON.stringify([strokesFile, uploadedFile]),
+          JSON.stringify(freehandScore),
+        ],
       );
     });
 
-    it('should leave telemetry out of the submissions CSVs', async () => {
+    it('should leave freehand recordings out of the submissions CSVs', async () => {
       for (const suffix of [
         '_all_submissions.csv',
         '_final_submissions.csv',
         '_best_submissions.csv',
       ]) {
         const data = await downloadCsv(downloadUrl(suffix));
-        assert.deepEqual(submittedFileNames(data), ['notes.txt'], suffix);
+        const answer = JSON.parse(data[0]['Submitted answer']);
+        assert.deepEqual(
+          answer._files.map((file: { name: string }) => file.name),
+          ['notes.txt'],
+          suffix,
+        );
+        assert.deepEqual(answer.ink, freehandAnswer, suffix);
       }
     });
 
-    it('should include telemetry in the opt-in CSV', async () => {
-      const data = await downloadCsv(downloadUrl('_all_submissions_with_pen_telemetry.csv'));
-      assert.deepEqual(submittedFileNames(data), ['ink-telemetry.json', 'notes.txt']);
+    it('should summarize each freehand drawing', async () => {
+      const [row] = await downloadCsv(downloadUrl('_freehand_summary.csv'));
+      assert.include(row, {
+        UID: 'dev@example.com',
+        Question: 'addNumbers',
+        Canvas: 'ink',
+        Score: 87,
+        'Coverage %': 91,
+        'Accuracy %': 84,
+        'Overlapping points': 120,
+        'Strokes submitted': 2,
+        'Undo count': 1,
+        'Clear count': 0,
+        'Cancelled strokes': 0,
+        'First stroke started (ms)': 800,
+        'Last stroke ended (ms)': 4200,
+        'Response duration (ms)': 5000,
+        'Start stroke (x, y)': '(162, 416)',
+        'End stroke (x, y)': '(350, 41)',
+      });
     });
 
-    it('should include telemetry in the submitted files zip', async () => {
+    it('should export the complete recordings as JSON', async () => {
+      const res = await fetch(downloadUrl('_freehand_telemetry.json'));
+      assert.equal(res.status, 200);
+      const [entry] = await res.json();
+      assert.include(entry, { uid: 'dev@example.com', qid: 'addNumbers', answers_name: 'ink' });
+      assert.deepEqual(entry.recording, recording);
+    });
+
+    it('should include freehand recordings in the submitted files zip', async () => {
       const res = await fetch(downloadUrl('_all_files.zip'));
       assert.equal(res.status, 200);
       const zip = await unzipper.Open.buffer(Buffer.from(await res.arrayBuffer()));
       const names = zip.files.map((file) => file.path);
-      assert.isTrue(names.some((name) => name.endsWith('_ink-telemetry.json')));
+      assert.isTrue(names.some((name) => name.endsWith('_ink-strokes.json')));
       assert.isTrue(names.some((name) => name.endsWith('_notes.txt')));
     });
   });

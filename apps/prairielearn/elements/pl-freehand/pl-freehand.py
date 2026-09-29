@@ -12,18 +12,23 @@ import prairielearn as pl
 
 SCHEMA_PATH = pathlib.Path(__file__).parent / "schemas" / "pl-freehand.json"
 REFERENCE_COLOR = "#198754"
-TELEMETRY_MIMETYPE = "application/vnd.prairielearn.freehand-telemetry+json"
-"""Marks telemetry files; assessment downloads leave these out of submission CSVs by default."""
+STROKES_MIMETYPE = "application/vnd.prairielearn.freehand-strokes+json"
+"""Marks the file holding a response's full recording; submission CSVs leave these out."""
 
 
-def telemetry_file_name(name: str) -> str:
-    return f"{name}-telemetry.json"
+def strokes_file_name(name: str) -> str:
+    return f"{name}-strokes.json"
 
 
-def answer_with_telemetry(data: pl.QuestionData, name: str) -> Any:
-    """The submitted answer, or its full recording when telemetry was saved as a file."""
+def full_answer(data: pl.QuestionData, name: str) -> Any:
+    """The complete recorded response.
+
+    Returns:
+        The decoded strokes file, or the answer itself for answers submitted before
+        responses were stored as files.
+    """
     for file in data["submitted_answers"].get("_files", []):
-        if file.get("name") == telemetry_file_name(name):
+        if file.get("name") in (strokes_file_name(name), f"{name}-telemetry.json"):
             return json.loads(base64.b64decode(file["contents"]))
     return data["submitted_answers"].get(name)
 
@@ -122,7 +127,7 @@ def render(element_html: str, data: pl.QuestionData) -> str:
     answer = (
         data["correct_answers"].get(s.name)
         if panel == "answer"
-        else answer_with_telemetry(data, s.name)
+        else full_answer(data, s.name)
     )
     if panel == "answer" and answer is None:
         return ""
@@ -154,7 +159,7 @@ def render(element_html: str, data: pl.QuestionData) -> str:
         "background_fit": "fill" if s.background_fit == "stretch" else "contain",
         "options_json": json.dumps(options),
         "submission": panel == "submission",
-        "feedback": partial_score.get("feedback"),
+        "feedback": _feedback_text(partial_score.get("feedback")),
         "format_error": data["format_errors"].get(s.name),
         **(dict([pl.determine_score_params(score)]) if score is not None else {}),
     }
@@ -169,17 +174,20 @@ def parse(element_html: str, data: pl.QuestionData) -> None:
     except ValueError as exc:
         data["format_errors"][s.name] = str(exc)
         return
-    if s.telemetry:
-        # Keep pen telemetry in its own submission file, so the graded answer (and the
-        # CSVs built from it) only holds the drawing itself.
-        pl.add_submitted_file(
-            data,
-            telemetry_file_name(s.name),
-            raw_contents=json.dumps(answer),
-            mimetype=TELEMETRY_MIMETYPE,
-        )
-        answer = {**ink.compact(answer), "canvas": answer.get("canvas")}
-    data["submitted_answers"][s.name] = answer
+    # The full recording goes in its own submission file; the answer keeps only a
+    # summary, so submission CSVs stay readable.
+    pl.add_submitted_file(
+        data,
+        strokes_file_name(s.name),
+        raw_contents=json.dumps(answer),
+        mimetype=STROKES_MIMETYPE,
+    )
+    data["submitted_answers"][s.name] = {
+        "element": "pl-freehand",
+        "version": 2,
+        "canvas": {"width": s.width, "height": s.height},
+        "summary": ink.summarize(answer, s.width, s.height),
+    }
 
 
 def parse_answer(raw: Any, s: Settings) -> dict[str, Any]:
@@ -211,16 +219,31 @@ def grade(element_html: str, data: pl.QuestionData) -> None:
     reference = data["correct_answers"].get(s.name)
     if reference is None:
         return
+    if s.name not in data["submitted_answers"]:
+        return
     reference_ink = s.sample(reference)
+    drawing = s.sample(full_answer(data, s.name))
+    match = ink.match(drawing, reference_ink, s.grading, s.tolerance)
+    near = ink.overlap_match(drawing, reference_ink, s.tolerance)
+    data["partial_scores"][s.name] = {
+        "score": s.credit(match),
+        "weight": s.weight,
+        "feedback": {
+            "text": (
+                f"Your drawing covers {match.recall:.0%} of the expected answer, "
+                f"and {match.precision:.0%} of your ink is on it."
+            ),
+            "coverage_percent": round(match.recall * 100),
+            "accuracy_percent": round(match.precision * 100),
+            # Sample points (spaced tolerance / 3 apart along the ink) near the reference.
+            "overlapping_points": round(near.precision * len(drawing)),
+        },
+    }
 
-    def grade_function(answer: Any) -> tuple[float, str]:
-        match = ink.match(s.sample(answer), reference_ink, s.grading, s.tolerance)
-        return s.credit(match), (
-            f"Your drawing covers {match.recall:.0%} of the expected answer, "
-            f"and {match.precision:.0%} of your ink is on it."
-        )
 
-    pl.grade_answer_parameterized(data, s.name, grade_function, weight=s.weight)
+def _feedback_text(feedback: Any) -> str | None:
+    """Feedback is a dict with grading details; older submissions stored only the text."""
+    return feedback.get("text") if isinstance(feedback, dict) else feedback
 
 
 def _stroke_answer(x: float, y: float, half_width: float) -> dict[str, Any]:

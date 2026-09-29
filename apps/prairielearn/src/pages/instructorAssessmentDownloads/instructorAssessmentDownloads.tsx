@@ -46,7 +46,11 @@ import {
   type Variant,
   VariantSchema,
 } from '../../lib/db-types.js';
-import { FREEHAND_TELEMETRY_MIMETYPE } from '../../lib/freehand-question.shared.js';
+import {
+  FREEHAND_STROKES_MIMETYPE,
+  freehandRecordings,
+  freehandSummaries,
+} from '../../lib/freehand-submissions.js';
 import { getGroupConfig } from '../../lib/groups.js';
 import { idsEqual } from '../../lib/id.js';
 import { type ResLocalsForPage, typedAsyncHandler } from '../../lib/res-locals.js';
@@ -242,11 +246,12 @@ function buildFilenames({
     finalSubmissionsCsvFilename: prefix + 'final_submissions.csv',
     bestSubmissionsCsvFilename: prefix + 'best_submissions.csv',
     allSubmissionsCsvFilename: prefix + 'all_submissions.csv',
-    allSubmissionsWithTelemetryCsvFilename: prefix + 'all_submissions_with_pen_telemetry.csv',
     filesForManualGradingZipFilename: prefix + 'files_for_manual_grading.zip',
     finalFilesZipFilename: prefix + 'final_files.zip',
     bestFilesZipFilename: prefix + 'best_files.zip',
     allFilesZipFilename: prefix + 'all_files.zip',
+    freehandSummaryCsvFilename: prefix + 'freehand_summary.csv',
+    freehandTelemetryJsonFilename: prefix + 'freehand_telemetry.json',
     canvasScoresCsvFilename: prefix + 'scores_for_canvas.csv',
     canvasPointsCsvFilename: prefix + 'points_for_canvas.csv',
   };
@@ -458,6 +463,32 @@ router.get(
  * Local abstraction to adapt our internal notion of columns to the columns
  * format that the CSV `stringify()` function expects.
  */
+/**
+ * Turns each row into the items `map` returns for it.
+ *
+ * @yields {Item} Every item, in row order.
+ */
+async function* flatMapRows<Row, Item>(
+  rows: AsyncIterable<Row>,
+  map: (row: Row) => Item[],
+): AsyncGenerator<Item> {
+  for await (const row of rows) yield* map(row);
+}
+
+/**
+ * Serializes items as a JSON array without holding them all in memory.
+ *
+ * @yields {string} Chunks of JSON text.
+ */
+async function* jsonArray(items: AsyncIterable<unknown>): AsyncGenerator<string> {
+  let separator = '[\n';
+  for await (const item of items) {
+    yield separator + JSON.stringify(item);
+    separator = ',\n';
+  }
+  yield separator === '[\n' ? '[]\n' : '\n]\n';
+}
+
 function stringifyWithColumns(columns: Columns, transform?: (record: any) => any) {
   return stringifyStream({
     header: true,
@@ -670,15 +701,10 @@ router.get(
       await pipeline(cursor.stream(100), stringifier, res);
     } else if (
       req.params.filename === filenames.allSubmissionsCsvFilename ||
-      req.params.filename === filenames.allSubmissionsWithTelemetryCsvFilename ||
       req.params.filename === filenames.finalSubmissionsCsvFilename ||
       req.params.filename === filenames.bestSubmissionsCsvFilename
     ) {
-      // Pen telemetry is only exported when the instructor chooses the telemetry download.
-      const include_telemetry =
-        req.params.filename === filenames.allSubmissionsWithTelemetryCsvFilename;
-      const include_all =
-        include_telemetry || req.params.filename === filenames.allSubmissionsCsvFilename;
+      const include_all = req.params.filename === filenames.allSubmissionsCsvFilename;
       const include_final = req.params.filename === filenames.finalSubmissionsCsvFilename;
       const include_best = req.params.filename === filenames.bestSubmissionsCsvFilename;
 
@@ -689,8 +715,9 @@ router.get(
           include_all,
           include_final,
           include_best,
-          include_telemetry,
-          telemetry_mimetype: FREEHAND_TELEMETRY_MIMETYPE,
+          // Freehand recordings are exported through the dedicated freehand downloads.
+          include_freehand_strokes: false,
+          freehand_strokes_mimetype: FREEHAND_STROKES_MIMETYPE,
         },
         AssessmentInstanceSubmissionRowSchema,
       );
@@ -791,14 +818,89 @@ router.get(
           include_all,
           include_final,
           include_best,
-          include_telemetry: true,
-          telemetry_mimetype: FREEHAND_TELEMETRY_MIMETYPE,
+          include_freehand_strokes: true,
+          freehand_strokes_mimetype: FREEHAND_STROKES_MIMETYPE,
         },
         AssessmentInstanceSubmissionRowSchema,
       );
 
       res.attachment(req.params.filename);
       await pipeCursorToArchive(res, cursor, extractFilesForSubmissions);
+    } else if (
+      req.params.filename === filenames.freehandSummaryCsvFilename ||
+      req.params.filename === filenames.freehandTelemetryJsonFilename
+    ) {
+      const isSummary = req.params.filename === filenames.freehandSummaryCsvFilename;
+      const cursor = await sqldb.queryCursor(
+        sql.assessment_instance_submissions,
+        {
+          assessment_id: res.locals.assessment.id,
+          include_all: true,
+          include_final: false,
+          include_best: false,
+          include_freehand_strokes: !isSummary,
+          freehand_strokes_mimetype: FREEHAND_STROKES_MIMETYPE,
+        },
+        AssessmentInstanceSubmissionRowSchema,
+      );
+      const submissionDetails = (row: AssessmentInstanceSubmissionRow) => ({
+        qid: qidWithSharingName(res.locals, row),
+        submission_date_formatted: formatDateISO(
+          row.submission_date,
+          res.locals.course_instance.display_timezone,
+        ),
+      });
+
+      res.attachment(req.params.filename);
+      if (isSummary) {
+        const columns = identityColumn.concat([
+          ['Assessment instance', 'assessment_instance_number'],
+          ['Question', 'qid'],
+          ['Variant', 'variant_number'],
+          ['Submission ID', 'submission_id'],
+          ['Submission date', 'submission_date_formatted'],
+          ['Canvas', 'answers_name'],
+          ['Score', 'score'],
+          ['Coverage %', 'coverage_percent'],
+          ['Accuracy %', 'accuracy_percent'],
+          ['Overlapping points', 'overlapping_points'],
+          ['Strokes submitted', 'strokes_submitted'],
+          ['Undo count', 'undo_count'],
+          ['Clear count', 'clear_count'],
+          ['Cancelled strokes', 'cancelled_strokes'],
+          ['First stroke started (ms)', 'first_stroke_started_ms'],
+          ['Last stroke ended (ms)', 'last_stroke_ended_ms'],
+          ['Response duration (ms)', 'response_duration_ms'],
+          ['Start stroke (x, y)', 'start_stroke'],
+          ['End stroke (x, y)', 'end_stroke'],
+        ]);
+        const records = flatMapRows(cursor.stream(100), (row: AssessmentInstanceSubmissionRow) =>
+          freehandSummaries(row.submitted_answer, row.partial_scores).map((summary) => ({
+            ...row,
+            ...submissionDetails(row),
+            ...summary,
+          })),
+        );
+        await pipeline(Readable.from(records), stringifyWithColumns(columns), res);
+      } else {
+        const records = flatMapRows(cursor.stream(100), (row: AssessmentInstanceSubmissionRow) =>
+          freehandRecordings(row.submitted_answer).map(({ answers_name, recording }) => {
+            const { qid, submission_date_formatted } = submissionDetails(row);
+            return {
+              uid: row.uid,
+              group_name: row.group_name,
+              assessment_instance: row.assessment_instance_number,
+              qid,
+              variant: row.variant_number,
+              submission_id: row.submission_id,
+              submission_date: submission_date_formatted,
+              answers_name,
+              recording,
+            };
+          }),
+        );
+        await pipeline(Readable.from(jsonArray(records)), res);
+      }
     } else if (req.params.filename === filenames.groupsCsvFilename) {
       const groupConfig = await getGroupConfig(res.locals.assessment.id);
       const cursor = await sqldb.queryCursor(

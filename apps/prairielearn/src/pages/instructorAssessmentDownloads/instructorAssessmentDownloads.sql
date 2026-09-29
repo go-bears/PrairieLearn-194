@@ -231,7 +231,7 @@ WITH
       s.id AS submission_id,
       s.date AS submission_date,
       CASE
-        WHEN $include_telemetry
+        WHEN $include_freehand_strokes
         OR NOT (s.submitted_answer ? '_files') THEN s.submitted_answer
         ELSE jsonb_set(
           s.submitted_answer,
@@ -243,7 +243,7 @@ WITH
               FROM
                 jsonb_array_elements(s.submitted_answer -> '_files') AS f
               WHERE
-                f ->> 'mimetype' IS DISTINCT FROM $telemetry_mimetype
+                f ->> 'mimetype' IS DISTINCT FROM $freehand_strokes_mimetype
             ),
             '[]'::jsonb
           )

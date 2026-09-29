@@ -220,10 +220,20 @@ def parse_answer(raw: Any, s: Settings) -> dict[str, Any]:
 
 def grade(element_html: str, data: pl.QuestionData) -> None:
     s = Settings.from_html(element_html)
+    if s.name not in data["submitted_answers"]:
+        return
+    if s.grading == "any-drawing":
+        drew = bool(ink.visible_strokes(full_answer(data, s.name)))
+        data["partial_scores"][s.name] = {
+            "score": 1.0 if drew else 0.0,
+            "weight": s.weight,
+            "feedback": {
+                "text": "Drawing received." if drew else "No drawing was submitted."
+            },
+        }
+        return
     reference = data["correct_answers"].get(s.name)
     if reference is None:
-        return
-    if s.name not in data["submitted_answers"]:
         return
     reference_ink = s.sample(reference)
     drawing = s.sample(full_answer(data, s.name))
@@ -264,6 +274,18 @@ def test(element_html: str, data: pl.ElementTestData) -> None:
     if test_type == "invalid":
         data["raw_submitted_answers"][s.name] = '{"version": 1}'
         data["format_errors"][s.name] = "invalid"
+    elif s.grading == "any-drawing":
+        # Any mark earns full credit, so the only wrong answer is a blank one, and
+        # that's only accepted with allow-blank.
+        blank = test_type == "incorrect" and s.allow_blank
+        answer = (
+            {"version": 1, "strokes": []} if blank else _stroke_answer(0.5, 0.5, 0.1)
+        )
+        data["raw_submitted_answers"][s.name] = json.dumps(answer)
+        data["partial_scores"][s.name] = {
+            "score": 0 if blank else 1,
+            "weight": s.weight,
+        }
     elif reference is None:
         # Without a reference the element doesn't grade, so any drawing is a valid answer.
         data["raw_submitted_answers"][s.name] = json.dumps(

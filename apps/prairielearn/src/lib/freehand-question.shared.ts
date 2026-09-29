@@ -70,7 +70,7 @@ const CanvasDimensionSchema = z.number().int().positive().max(MAX_CANVAS_DIMENSI
 
 const FreehandGradingSchema = z.object({
   autograde: z.boolean(),
-  mode: z.enum(['overlap', 'function']),
+  mode: z.enum(['overlap', 'function', 'any-drawing']),
   tolerance: z.number().positive().max(200),
   passThreshold: z.number().gt(0).max(1),
   partialCredit: z.boolean(),

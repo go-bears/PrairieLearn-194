@@ -9,7 +9,7 @@ const plFreehandAttributesSchema = z
     'answers-name': z.string(),
     'background-fit': z.enum(['contain', 'stretch']).optional(),
     'background-image': z.string().optional(),
-    grading: z.enum(['overlap', 'function']).optional(),
+    grading: z.enum(['overlap', 'function', 'any-drawing']).optional(),
     height: integerFormat().optional(),
     'max-points': integerFormat().optional(),
     'partial-credit': booleanFormat().optional(),

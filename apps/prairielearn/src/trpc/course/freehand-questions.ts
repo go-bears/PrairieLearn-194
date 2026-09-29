@@ -141,7 +141,7 @@ const save = t.procedure
     const { autograde } = input.question.grading;
 
     const { backgroundImage, image } = await resolveBackground(input.background, questionPath);
-    if (autograde && !input.reference) {
+    if (autograde && input.question.grading.mode !== 'any-drawing' && !input.reference) {
       throw badRequest('Draw a reference answer to enable autograding.');
     }
 

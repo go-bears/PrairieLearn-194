@@ -18,7 +18,7 @@
     },
     "grading": {
       "type": "string",
-      "enum": ["overlap", "function"]
+      "enum": ["overlap", "function", "any-drawing"]
     },
     "height": {
       "type": "string",

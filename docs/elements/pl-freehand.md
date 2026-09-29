@@ -39,24 +39,24 @@ Saving writes `question.html`, `info.json`, `reference.json`, and the image in a
 
 ## Customizations
 
-| Attribute          | Type                        | Default     | Description                                                                                 |
-| ------------------ | --------------------------- | ----------- | ------------------------------------------------------------------------------------------- |
-| `answers-name`     | string                      | —           | Name used to store the response.                                                            |
-| `width`            | integer                     | `800`       | Logical canvas width in pixels. Match the background image's aspect ratio.                  |
-| `height`           | integer                     | `400`       | Logical canvas height in pixels.                                                            |
-| `background-image` | string                      | —           | File in `clientFilesQuestion/` shown beneath the ink. It is never part of the answer.       |
-| `background-fit`   | `"contain"` or `"stretch"`  | `"contain"` | Whether the background keeps its aspect ratio or fills the canvas.                          |
-| `reference-file`   | string                      | —           | Reference drawing, relative to the question directory. Enables autograding.                 |
-| `grading`          | `"overlap"` or `"function"` | `"overlap"` | How to compare the student's ink with the reference. See [Grading](#grading).               |
-| `tolerance`        | number                      | `12`        | Distance in logical pixels within which ink counts as matching.                             |
-| `pass-threshold`   | number                      | `0.8`       | Match score in `(0, 1]` that earns full credit.                                             |
-| `partial-credit`   | boolean                     | `true`      | Award proportional credit below `pass-threshold`. If `false`, scores below it earn nothing. |
-| `weight`           | integer                     | `1`         | Weight of this element within the question score.                                           |
-| `max-points`       | integer                     | `10000`     | Maximum number of points accepted in one response.                                          |
-| `telemetry`        | boolean                     | `false`     | Collect pressure, tilt, elapsed time, and pointer type in addition to coordinates.          |
-| `allow-blank`      | boolean                     | `false`     | Allow submission without any visible strokes.                                               |
-| `stroke-color`     | string                      | `#111827`   | CSS color used to render strokes.                                                           |
-| `stroke-width`     | number                      | `2`         | Rendered stroke width in logical pixels.                                                    |
+| Attribute          | Type                                          | Default     | Description                                                                                 |
+| ------------------ | --------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------- |
+| `answers-name`     | string                                        | —           | Name used to store the response.                                                            |
+| `width`            | integer                                       | `800`       | Logical canvas width in pixels. Match the background image's aspect ratio.                  |
+| `height`           | integer                                       | `400`       | Logical canvas height in pixels.                                                            |
+| `background-image` | string                                        | —           | File in `clientFilesQuestion/` shown beneath the ink. It is never part of the answer.       |
+| `background-fit`   | `"contain"` or `"stretch"`                    | `"contain"` | Whether the background keeps its aspect ratio or fills the canvas.                          |
+| `reference-file`   | string                                        | —           | Reference drawing, relative to the question directory. Enables autograding.                 |
+| `grading`          | `"overlap"`, `"function"`, or `"any-drawing"` | `"overlap"` | How to compare the student's ink with the reference. See [Grading](#grading).               |
+| `tolerance`        | number                                        | `12`        | Distance in logical pixels within which ink counts as matching.                             |
+| `pass-threshold`   | number                                        | `0.8`       | Match score in `(0, 1]` that earns full credit.                                             |
+| `partial-credit`   | boolean                                       | `true`      | Award proportional credit below `pass-threshold`. If `false`, scores below it earn nothing. |
+| `weight`           | integer                                       | `1`         | Weight of this element within the question score.                                           |
+| `max-points`       | integer                                       | `10000`     | Maximum number of points accepted in one response.                                          |
+| `telemetry`        | boolean                                       | `false`     | Collect pressure, tilt, elapsed time, and pointer type in addition to coordinates.          |
+| `allow-blank`      | boolean                                       | `false`     | Allow submission without any visible strokes.                                               |
+| `stroke-color`     | string                                        | `#111827`   | CSS color used to render strokes.                                                           |
+| `stroke-width`     | number                                        | `2`         | Rendered stroke width in logical pixels.                                                    |
 
 ## Grading
 
@@ -71,6 +71,7 @@ The match score is the harmonic mean of the two, so missing parts and stray mark
 
 - `grading="overlap"` compares the drawings as shapes: a point matches if it is within `tolerance` of any point in the other drawing. Use it for freeform marks such as shapes, labels, or shading.
 - `grading="function"` compares the drawings as graphs $y = f(x)$: the canvas is split into `tolerance`-wide columns, and a column matches if the median heights of both drawings in it are within `tolerance`. Use it for graphing questions; it is less forgiving of ink drawn at the wrong height.
+- `grading="any-drawing"` gives full credit for any submission with at least one visible stroke and doesn't need a reference drawing. Use it when any mark is acceptable, such as a signature. A blank canvas scores 0 when `allow-blank` is set; otherwise it can't be submitted.
 
 The submission panel shows the score and coverage feedback. The answer panel shows the reference drawing.
 

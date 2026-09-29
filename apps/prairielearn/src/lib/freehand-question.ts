@@ -4,6 +4,8 @@ import * as cheerio from 'cheerio';
 import fs from 'fs-extra';
 import { z } from 'zod';
 
+import { run } from '@prairielearn/run';
+
 import {
   BUILT_IN_BACKGROUNDS,
   type BuiltInBackgroundId,
@@ -51,12 +53,13 @@ export function renderFreehandQuestionHtml({
     'background-image': backgroundImage,
     'background-fit': backgroundImage ? 'stretch' : null,
     'reference-file': hasReference ? REFERENCE_FILE_NAME : null,
-    ...(grading.autograde && {
-      grading: grading.mode,
-      tolerance: grading.tolerance,
-      'pass-threshold': grading.passThreshold,
-      'partial-credit': grading.partialCredit,
-    }),
+    ...(grading.autograde && { grading: grading.mode }),
+    ...(grading.autograde &&
+      grading.mode !== 'any-drawing' && {
+        tolerance: grading.tolerance,
+        'pass-threshold': grading.passThreshold,
+        'partial-credit': grading.partialCredit,
+      }),
   };
 
   return [
@@ -107,7 +110,10 @@ export function parseFreehandQuestionHtml(html: string, { autograde }: { autogra
       telemetry: flag('telemetry', false),
       grading: {
         autograde,
-        mode: element.attr('grading') === 'function' ? 'function' : 'overlap',
+        mode: run(() => {
+          const mode = element.attr('grading');
+          return mode === 'function' || mode === 'any-drawing' ? mode : 'overlap';
+        }),
         tolerance: number('tolerance', defaults.grading.tolerance),
         passThreshold: number('pass-threshold', defaults.grading.passThreshold),
         partialCredit: flag('partial-credit', defaults.grading.partialCredit),

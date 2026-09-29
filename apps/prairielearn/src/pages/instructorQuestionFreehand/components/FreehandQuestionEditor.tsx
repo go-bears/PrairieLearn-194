@@ -122,6 +122,7 @@ function FreehandQuestionForm({
     formState: { errors },
   } = useForm<FormValues>({ defaultValues });
   const autograde = watch('autograde');
+  const comparesWithAnswerKey = watch('mode') !== 'any-drawing';
   const assessmentId = watch('assessmentId');
 
   function changeBackground(background: BackgroundChoice) {
@@ -135,7 +136,7 @@ function FreehandQuestionForm({
 
   function onSubmit(values: FormValues) {
     const reference = canvasRef.current?.getReference() ?? null;
-    if (values.autograde && !reference) {
+    if (values.autograde && values.mode !== 'any-drawing' && !reference) {
       setReferenceError('Draw the correct answer on the canvas to enable autograding.');
       return;
     }
@@ -271,57 +272,68 @@ function FreehandQuestionForm({
                 >
                   <option value="function">Graphs of y = f(x)</option>
                   <option value="overlap">Shapes</option>
+                  <option value="any-drawing">Any drawing (full credit for any mark)</option>
                 </select>
               </div>
-              <div className="col-md-4">
-                <label className="form-label" htmlFor="tolerance">
-                  Tolerance (pixels)
-                </label>
-                <input
-                  id="tolerance"
-                  type="number"
-                  step="any"
-                  className={clsx('form-control', errors.tolerance && 'is-invalid')}
-                  defaultValue={defaultValues.tolerance}
-                  {...invalid('tolerance')}
-                  {...register('tolerance', {
-                    valueAsNumber: true,
-                    min: { value: 1, message: 'Enter at least 1 pixel' },
-                    max: { value: 200, message: 'Enter at most 200 pixels' },
-                  })}
-                />
-                <FieldError id="tolerance-error" message={errors.tolerance?.message} />
-              </div>
-              <div className="col-md-4">
-                <label className="form-label" htmlFor="passPercent">
-                  Match for full credit (%)
-                </label>
-                <input
-                  id="passPercent"
-                  type="number"
-                  className={clsx('form-control', errors.passPercent && 'is-invalid')}
-                  defaultValue={defaultValues.passPercent}
-                  {...invalid('passPercent')}
-                  {...register('passPercent', {
-                    valueAsNumber: true,
-                    min: { value: 1, message: 'Enter a percentage from 1 to 100' },
-                    max: { value: 100, message: 'Enter a percentage from 1 to 100' },
-                  })}
-                />
-                <FieldError id="passPercent-error" message={errors.passPercent?.message} />
-              </div>
-              <div className="col-12 form-check ms-2">
-                <input
-                  id="partialCredit"
-                  type="checkbox"
-                  className="form-check-input"
-                  defaultChecked={defaultValues.partialCredit}
-                  {...register('partialCredit')}
-                />
-                <label className="form-check-label" htmlFor="partialCredit">
-                  Award partial credit for partial matches
-                </label>
-              </div>
+              {!comparesWithAnswerKey && (
+                <p className="col-md-8 text-muted mb-0 align-self-end">
+                  Any submission with at least one stroke earns full credit, for example a
+                  signature. No answer key is needed.
+                </p>
+              )}
+              {comparesWithAnswerKey && (
+                <>
+                  <div className="col-md-4">
+                    <label className="form-label" htmlFor="tolerance">
+                      Tolerance (pixels)
+                    </label>
+                    <input
+                      id="tolerance"
+                      type="number"
+                      step="any"
+                      className={clsx('form-control', errors.tolerance && 'is-invalid')}
+                      defaultValue={defaultValues.tolerance}
+                      {...invalid('tolerance')}
+                      {...register('tolerance', {
+                        valueAsNumber: true,
+                        min: { value: 1, message: 'Enter at least 1 pixel' },
+                        max: { value: 200, message: 'Enter at most 200 pixels' },
+                      })}
+                    />
+                    <FieldError id="tolerance-error" message={errors.tolerance?.message} />
+                  </div>
+                  <div className="col-md-4">
+                    <label className="form-label" htmlFor="passPercent">
+                      Match for full credit (%)
+                    </label>
+                    <input
+                      id="passPercent"
+                      type="number"
+                      className={clsx('form-control', errors.passPercent && 'is-invalid')}
+                      defaultValue={defaultValues.passPercent}
+                      {...invalid('passPercent')}
+                      {...register('passPercent', {
+                        valueAsNumber: true,
+                        min: { value: 1, message: 'Enter a percentage from 1 to 100' },
+                        max: { value: 100, message: 'Enter a percentage from 1 to 100' },
+                      })}
+                    />
+                    <FieldError id="passPercent-error" message={errors.passPercent?.message} />
+                  </div>
+                  <div className="col-12 form-check ms-2">
+                    <input
+                      id="partialCredit"
+                      type="checkbox"
+                      className="form-check-input"
+                      defaultChecked={defaultValues.partialCredit}
+                      {...register('partialCredit')}
+                    />
+                    <label className="form-check-label" htmlFor="partialCredit">
+                      Award partial credit for partial matches
+                    </label>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

@@ -186,7 +186,10 @@ def parse(element_html: str, data: pl.QuestionData) -> None:
         "element": "pl-freehand",
         "version": 2,
         "canvas": {"width": s.width, "height": s.height},
-        "summary": ink.summarize(answer, s.width, s.height),
+        "summary": {
+            **ink.summarize(answer, s.width, s.height),
+            "telemetry": s.telemetry,
+        },
     }
 
 

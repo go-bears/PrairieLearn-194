@@ -76,6 +76,7 @@ const AssessmentInstanceSubmissionRowSchema = z.object({
   course_sharing_name: CourseSchema.shape.sharing_name,
   qid: QuestionSchema.shape.qid,
   instance_question_number: InstanceQuestionSchema.shape.number,
+  grading_method: QuestionSchema.shape.grading_method,
   points: InstanceQuestionSchema.shape.points,
   score_perc: InstanceQuestionSchema.shape.score_perc,
   auto_points: InstanceQuestionSchema.shape.auto_points,
@@ -861,6 +862,10 @@ router.get(
           ['Submission date', 'submission_date_formatted'],
           ['Canvas', 'answers_name'],
           ['Score', 'score'],
+          ['Gradebook points', 'points'],
+          ['Max points', 'max_points'],
+          ['Autograded', 'autograded'],
+          ['Telemetry on', 'telemetry_on'],
           ['Coverage %', 'coverage_percent'],
           ['Accuracy %', 'accuracy_percent'],
           ['Overlapping points', 'overlapping_points'],
@@ -879,6 +884,9 @@ router.get(
             ...row,
             ...submissionDetails(row),
             ...summary,
+            // `points` are the question's current gradebook points, auto plus manual.
+            autograded: row.grading_method === 'Manual' ? 'FALSE' : 'TRUE',
+            telemetry_on: summary.telemetry == null ? null : summary.telemetry ? 'TRUE' : 'FALSE',
           })),
         );
         await pipeline(Readable.from(records), stringifyWithColumns(columns), res);

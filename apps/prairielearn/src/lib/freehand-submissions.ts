@@ -21,6 +21,8 @@ const FreehandAnswerSchema = z.object({
     response_duration_ms: z.number().nullable(),
     start_stroke: PointSchema.nullable(),
     end_stroke: PointSchema.nullable(),
+    /** Absent in summaries stored before this was recorded. */
+    telemetry: z.boolean().optional(),
   }),
 });
 
@@ -55,6 +57,7 @@ export interface FreehandSummary {
   response_duration_ms: number | null;
   start_stroke: string | null;
   end_stroke: string | null;
+  telemetry: boolean | null;
 }
 
 const formatPoint = (point: [number, number] | null) =>
@@ -73,7 +76,7 @@ export function freehandSummaries(
     if (!answer.success) return [];
     const partialScore = PartialScoreSchema.safeParse(partialScores?.[name]).data;
     const grading = GradingDetailsSchema.safeParse(partialScore?.feedback).data;
-    const { start_stroke, end_stroke, ...summary } = answer.data.summary;
+    const { start_stroke, end_stroke, telemetry, ...summary } = answer.data.summary;
     return [
       {
         answers_name: name,
@@ -84,6 +87,7 @@ export function freehandSummaries(
         ...summary,
         start_stroke: formatPoint(start_stroke),
         end_stroke: formatPoint(end_stroke),
+        telemetry: telemetry ?? null,
       },
     ];
   });

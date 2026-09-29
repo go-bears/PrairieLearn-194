@@ -54,6 +54,7 @@ describe('freehandSummaries', () => {
         response_duration_ms: 5000,
         start_stroke: '(162, 416)',
         end_stroke: '(350, 41)',
+        telemetry: null,
       },
     ]);
   });

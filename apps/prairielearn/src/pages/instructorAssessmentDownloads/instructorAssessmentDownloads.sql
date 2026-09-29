@@ -215,6 +215,7 @@ WITH
       c.sharing_name AS course_sharing_name,
       q.qid,
       iq.number AS instance_question_number,
+      q.grading_method,
       iq.points,
       iq.score_perc,
       iq.auto_points,
